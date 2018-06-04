@@ -41,6 +41,15 @@ inline double KS(double lambda){ // Defined by (19) from Dupin2007
     return res;
 }
 
+inline double V(double cur, double relax){ // cur - current length of the edge, relax - relaxed length of the edge
+    double res = 0.0;
+    if (cur > 0.5*relax) res = 0.0; 
+    else {
+        res = pow(relax*0.5/cur - 1, 1.0);
+    }
+    return res;
+}
+
 /** Computes the local forces (Dupin2007) and adds them
     to the particle forces. 
     @param p1,p2,p3     Pointers to particles of triangle 1.
@@ -141,7 +150,8 @@ inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3, Particle *p4
         len = sqrt(len2);
         dr = len - iaparams->p.oif_local_forces.r0;
         lambda = 1.0*len/iaparams->p.oif_local_forces.r0;
-        fac = -iaparams->p.oif_local_forces.ks * KS(lambda) * dr; // no normalization
+//        fac = -iaparams->p.oif_local_forces.ks * KS(lambda) * dr; // no normalization
+        fac = -iaparams->p.oif_local_forces.ks * KS(lambda) * dr + iaparams->p.oif_local_forces.ks*V(len,iaparams->p.oif_local_forces.r0); // no normalization
         for(i=0; i<3; i++) {
             force2[i] += fac*dx[i]/len;
             force3[i] += -fac*dx[i]/len;
