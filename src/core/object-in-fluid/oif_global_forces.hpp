@@ -27,7 +27,7 @@
 /** set parameters for the OIF_GLOBAL_FORCES potential.
  */
 int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g,
-                                 double V0, double kv);
+                                 double V0, double kv, double inner_fluid_visc);
 void calc_oif_global(double *area_volume, int molType);
 void add_oif_global_forces(double *area_volume, int molType);
 

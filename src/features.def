@@ -69,6 +69,7 @@ LB_GPU                          requires CUDA
 LB_BOUNDARIES                   requires LB
 LB_BOUNDARIES_GPU               requires LB_GPU
 LB_ELECTROHYDRODYNAMICS         implies LB
+LB_VARIABLE_VISCOSITY           implies LB
 ELECTROKINETICS                 implies LB_GPU, EXTERNAL_FORCES, ELECTROSTATICS
 ELECTROKINETICS                 requires CUDA
 EK_BOUNDARIES                   implies ELECTROKINETICS, LB_GPU, LB_BOUNDARIES_GPU, EXTERNAL_FORCES, ELECTROSTATICS

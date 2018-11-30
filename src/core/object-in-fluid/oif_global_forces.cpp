@@ -40,7 +40,7 @@ using Utils::get_n_triangle;
 /** set parameters for the OIF_GLOBAL_FORCES potential.
  */
 int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g,
-                                 double V0, double kv) {
+                                 double V0, double kv, double inner_fluid_visc) {
   if (bond_type < 0)
     return ES_ERROR;
 
@@ -50,6 +50,7 @@ int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g,
   bonded_ia_params[bond_type].p.oif_global_forces.A0_g = A0_g;
   bonded_ia_params[bond_type].p.oif_global_forces.V0 = V0;
   bonded_ia_params[bond_type].p.oif_global_forces.kv = kv;
+  bonded_ia_params[bond_type].p.oif_global_forces.inner_fluid_visc = inner_fluid_visc;
 
   bonded_ia_params[bond_type].type = BONDED_IA_OIF_GLOBAL_FORCES;
   bonded_ia_params[bond_type].num = 2;

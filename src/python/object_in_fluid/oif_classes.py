@@ -813,7 +813,7 @@ class OifCellType(object):  # analogous to oif_template
 
     def __init__(
         self, nodes_file="", triangles_file="", system=None, resize=(1.0, 1.0, 1.0), ks=0.0, kslin=0.0,
-                 kb=0.0, kal=0.0, kag=0.0, kv=0.0, kvisc=0.0, normal=False, check_orientation=True):
+                 kb=0.0, kal=0.0, kag=0.0, kv=0.0, kvisc=0.0, inner_fluid_visc=0.0, normal=False, check_orientation=True):
         if (system is None) or (not isinstance(system, espressomd.System)):
             raise Exception(
                 "OifCellType: No system provided or wrong type. Quitting.")
@@ -825,7 +825,7 @@ class OifCellType(object):  # analogous to oif_template
         if not ((len(resize) == 3) and isinstance(resize[0], float) and isinstance(resize[1], float) and isinstance(resize[2], float)):
             raise TypeError(
                 "OifCellType: Resize must be a list of three floats.")
-        if not (isinstance(ks, float) and isinstance(ks, float) and isinstance(kb, float) and isinstance(kal, float) and isinstance(kag, float) and isinstance(kv, float) and isinstance(kvisc, float)):
+        if not (isinstance(ks, float) and isinstance(kslin, float) and isinstance(kb, float) and isinstance(kal, float) and isinstance(kag, float) and isinstance(kv, float) and isinstance(kvisc, float) and isinstance(inner_fluid_visc, float)):
             raise TypeError("OifCellType: Elastic parameters must be floats.")
         if not isinstance(normal, bool):
             raise TypeError("OifCellType: normal must be bool.")
@@ -847,8 +847,9 @@ class OifCellType(object):  # analogous to oif_template
         self.kag = kag
         self.kv = kv
         self.kvisc = kvisc
+        self.inner_fluid_visc = inner_fluid_visc
         self.normal = normal
-        if (ks != 0.0) or (kslin != 0.0) or (kb != 0.0) or (kal != 0.0):
+        if (ks != 0.0) or (kslin != 0.0) or (kb != 0.0) or (kal != 0.0) or (inner_fluid_visc != 0.0):
             for angle in self.mesh.angles:
                 r0 = vec_distance(angle.B.get_pos(), angle.C.get_pos())
                 phi = angle_btw_triangles(
@@ -867,7 +868,7 @@ class OifCellType(object):  # analogous to oif_template
             surface = self.mesh.surface()
             volume = self.mesh.volume()
             self.global_force_interaction = OifGlobalForces(
-                A0_g=surface, ka_g=kag, V0=volume, kv=kv)
+                A0_g=surface, ka_g=kag, V0=volume, kv=kv, inner_fluid_visc=inner_fluid_visc)
             self.system.bonded_inter.add(self.global_force_interaction)
 
     def print_info(self):
@@ -884,6 +885,7 @@ class OifCellType(object):  # analogous to oif_template
         print("\t kag: " + custom_str(self.kag))
         print("\t kv: " + custom_str(self.kv))
         print("\t kvisc: " + custom_str(self.kvisc))
+        print("\t inner_fluid_visc: " + custom_str(self.inner_fluid_visc))
         print("\t normal: " + str(self.normal))
         print("\t resize: " + str(self.resize))
         print(" ")

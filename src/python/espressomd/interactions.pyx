@@ -3185,30 +3185,31 @@ class OifGlobalForces(BondedInteraction):
         """All parameters that can be set.
 
         """
-        return "A0_g", "ka_g", "V0", "kv"
+        return "A0_g", "ka_g", "V0", "kv", "inner_fluid_visc"
 
     def required_keys(self):
         """Parameters that have to be set.
 
         """
-        return "A0_g", "ka_g", "V0", "kv"
+        return "A0_g", "ka_g", "V0", "kv", "inner_fluid_visc"
 
     def set_default_params(self):
         """Sets parameters that are not required to their default value.
 
         """
-        self._params = {"A0_g": 1., "ka_g": 0., "V0": 1., "kv": 0.}
+        self._params = {"A0_g": 1., "ka_g": 0., "V0": 1., "kv": 0., "inner_fluid_visc": 0.}
 
     def _get_params_from_es_core(self):
         return \
             {"A0_g": bonded_ia_params[self._bond_id].p.oif_global_forces.A0_g,
              "ka_g": bonded_ia_params[self._bond_id].p.oif_global_forces.ka_g,
              "V0": bonded_ia_params[self._bond_id].p.oif_global_forces.V0,
-             "kv": bonded_ia_params[self._bond_id].p.oif_global_forces.kv}
+             "kv": bonded_ia_params[self._bond_id].p.oif_global_forces.kv,
+             "inner_fluid_visc": bonded_ia_params[self._bond_id].p.oif_global_forces.inner_fluid_visc}
 
     def _set_params_in_es_core(self):
         oif_global_forces_set_params(
-            self._bond_id, self._params["A0_g"], self._params["ka_g"], self._params["V0"], self._params["kv"])
+            self._bond_id, self._params["A0_g"], self._params["ka_g"], self._params["V0"], self._params["kv"], self._params["inner_fluid_visc"])
 
 
 class OifLocalForces(BondedInteraction):

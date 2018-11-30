@@ -1971,6 +1971,23 @@ static void lb_prepare_communication() {
 void lb_reinit_parameters() {
   int i;
 
+#ifdef LB_VARIABLE_VISCOSITY
+  /** initializes the variable viscosity fields, all the fields will be constant with viscosity values given by lbfluid. */
+  for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
+    for (int y = 0; y < lblattice.halo_grid[1]; ++y) {
+      for (int z = 0; z < lblattice.halo_grid[2]; ++z) {
+        int index = get_linear_index(x, y, z, lblattice.halo_grid);
+          lbfields[index].var_visc_gamma_shear = 1. - 2. / (6. * lbpar.viscosity * lbpar.tau /
+                                                                (lbpar.agrid * lbpar.agrid) +
+                                                            1.);
+          //lbfields[index].var_visc_gamma_bulk = 1. - 2. / (9. * lbpar.bulk_viscosity * lbpar.tau /
+          //                                                      (lbpar.agrid * lbpar.agrid) +
+          //                                                  1.);
+      }
+    }
+  }
+#endif
+
   if (lbpar.viscosity > 0.0) {
     /* Eq. (80) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007). */
     // unit conversion: viscosity
@@ -2283,11 +2300,23 @@ inline void lb_relax_modes(Lattice::index_t index, double *mode) {
 
   /* relax the stress modes */
   mode[4] = pi_eq[0] + lbpar.gamma_bulk * (mode[4] - pi_eq[0]);
+#ifndef LB_VARIABLE_VISCOSITY
+  /* constant fluid viscosity */
   mode[5] = pi_eq[1] + lbpar.gamma_shear * (mode[5] - pi_eq[1]);
   mode[6] = pi_eq[2] + lbpar.gamma_shear * (mode[6] - pi_eq[2]);
   mode[7] = pi_eq[3] + lbpar.gamma_shear * (mode[7] - pi_eq[3]);
   mode[8] = pi_eq[4] + lbpar.gamma_shear * (mode[8] - pi_eq[4]);
   mode[9] = pi_eq[5] + lbpar.gamma_shear * (mode[9] - pi_eq[5]);
+#endif
+#ifdef LB_VARIABLE_VISCOSITY
+  /* variable fluid viscosity */
+  double gamma_shear_tmp = lbfields[index].var_visc_gamma_shear;
+  mode[5] = pi_eq[1] + gamma_shear_tmp * (mode[5] - pi_eq[1]);
+  mode[6] = pi_eq[2] + gamma_shear_tmp * (mode[6] - pi_eq[2]);
+  mode[7] = pi_eq[3] + gamma_shear_tmp * (mode[7] - pi_eq[3]);
+  mode[8] = pi_eq[4] + gamma_shear_tmp * (mode[8] - pi_eq[4]);
+  mode[9] = pi_eq[5] + gamma_shear_tmp * (mode[9] - pi_eq[5]);
+#endif
 
   /* relax the ghost modes (project them out) */
   /* ghost modes have no equilibrium part due to orthogonality */
@@ -2357,6 +2386,8 @@ inline void lb_apply_forces(Lattice::index_t index, double *mode) {
   u[1] = (mode[2] + 0.5 * f[1]) / rho;
   u[2] = (mode[3] + 0.5 * f[2]) / rho;
 
+#ifndef LB_VARIABLE_VISCOSITY
+  /* constant fluid viscosity */
   C[0] = (1. + lbpar.gamma_bulk) * u[0] * f[0] +
          1. / 3. * (lbpar.gamma_bulk - lbpar.gamma_shear) * scalar(u, f);
   C[2] = (1. + lbpar.gamma_bulk) * u[1] * f[1] +
@@ -2366,6 +2397,20 @@ inline void lb_apply_forces(Lattice::index_t index, double *mode) {
   C[1] = 1. / 2. * (1. + lbpar.gamma_shear) * (u[0] * f[1] + u[1] * f[0]);
   C[3] = 1. / 2. * (1. + lbpar.gamma_shear) * (u[0] * f[2] + u[2] * f[0]);
   C[4] = 1. / 2. * (1. + lbpar.gamma_shear) * (u[1] * f[2] + u[2] * f[1]);
+#endif
+#ifdef LB_VARIABLE_VISCOSITY
+  /* variable fluid viscosity */
+  double gamma_shear_tmp = lbfields[index].var_visc_gamma_shear;
+  C[0] = (1. + lbpar.gamma_bulk) * u[0] * f[0] +
+         1. / 3. * (lbpar.gamma_bulk - gamma_shear_tmp) * scalar(u, f);
+  C[2] = (1. + lbpar.gamma_bulk) * u[1] * f[1] +
+         1. / 3. * (lbpar.gamma_bulk - gamma_shear_tmp) * scalar(u, f);
+  C[5] = (1. + lbpar.gamma_bulk) * u[2] * f[2] +
+         1. / 3. * (lbpar.gamma_bulk - gamma_shear_tmp) * scalar(u, f);
+  C[1] = 1. / 2. * (1. + gamma_shear_tmp) * (u[0] * f[1] + u[1] * f[0]);
+  C[3] = 1. / 2. * (1. + gamma_shear_tmp) * (u[0] * f[2] + u[2] * f[0]);
+  C[4] = 1. / 2. * (1. + gamma_shear_tmp) * (u[1] * f[2] + u[2] * f[1]);
+#endif
 
   /* update momentum modes */
   mode[1] += f[0];

@@ -120,6 +120,13 @@ struct LB_FluidNode {
 
   /** local force density */
   double force_density[3];
+#ifdef LB_VARIABLE_VISCOSITY
+  double var_visc_gamma_shear;
+  // other variables are ready in case bulk or TRT is used
+  //double var_visc_gamma_bulk;
+  //double var_visc_gamma_odd;
+  //double var_visc_gamma_even;
+#endif
 #ifdef VIRTUAL_SITES_INERTIALESS_TRACERS
   // For particle update, we need the force on the nodes in LBM
   // Yet, Espresso resets the force immediately after the LBM update
@@ -280,6 +287,7 @@ void lb_calc_modes(Lattice::index_t index, double *mode);
  * @param index the local lattice site (Input).
  * @param rho   local fluid density
  */
+ 
 inline void lb_calc_local_rho(Lattice::index_t index, double *rho) {
   // unit conversion: mass density
   if (!(lattice_switch & LATTICE_LB)) {
@@ -424,6 +432,8 @@ inline void lb_calc_local_fields(Lattice::index_t index, double *rho, double *j,
   /* We immediately average pre- and post-collision. */
   mode[4] = modes_from_pi_eq[0] +
             (0.5 + 0.5 * lbpar.gamma_bulk) * (mode[4] - modes_from_pi_eq[0]);
+#ifndef LB_VARIABLE_VISCOSITY
+  /* constant fluid viscosity */
   mode[5] = modes_from_pi_eq[1] +
             (0.5 + 0.5 * lbpar.gamma_shear) * (mode[5] - modes_from_pi_eq[1]);
   mode[6] = modes_from_pi_eq[2] +
@@ -434,7 +444,21 @@ inline void lb_calc_local_fields(Lattice::index_t index, double *rho, double *j,
             (0.5 + 0.5 * lbpar.gamma_shear) * (mode[8] - modes_from_pi_eq[4]);
   mode[9] = modes_from_pi_eq[5] +
             (0.5 + 0.5 * lbpar.gamma_shear) * (mode[9] - modes_from_pi_eq[5]);
-
+#endif
+#ifdef LB_VARIABLE_VISCOSITY
+  /* variable fluid viscosity */
+  double gamma_shear_tmp = lbfields[index].var_visc_gamma_shear;
+  mode[5] = modes_from_pi_eq[1] +
+            (0.5 + 0.5 * gamma_shear_tmp) * (mode[5] - modes_from_pi_eq[1]);
+  mode[6] = modes_from_pi_eq[2] +
+            (0.5 + 0.5 * gamma_shear_tmp) * (mode[6] - modes_from_pi_eq[2]);
+  mode[7] = modes_from_pi_eq[3] +
+            (0.5 + 0.5 * gamma_shear_tmp) * (mode[7] - modes_from_pi_eq[3]);
+  mode[8] = modes_from_pi_eq[4] +
+            (0.5 + 0.5 * gamma_shear_tmp) * (mode[8] - modes_from_pi_eq[4]);
+  mode[9] = modes_from_pi_eq[5] +
+            (0.5 + 0.5 * gamma_shear_tmp) * (mode[9] - modes_from_pi_eq[5]);
+#endif
   // Transform the stress tensor components according to the modes that
   // correspond to those used by U. Schiller. In terms of populations this
   // expression then corresponds exactly to those in Eqs. 116 - 121 in the

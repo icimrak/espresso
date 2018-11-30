@@ -42,6 +42,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define LB
 #define LB_BOUNDARIES
 #define LB_ELECTROHYDRODYNAMICS
+#define LB_VARIABLE_VISCOSITY
 
 #define ENGINE
 

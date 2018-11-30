@@ -93,6 +93,7 @@ struct Oif_global_forces_bond_parameters {
   double ka_g;
   double V0;
   double kv;
+  double inner_fluid_visc;
 };
 
 /** Parameters for oif_local_forces */

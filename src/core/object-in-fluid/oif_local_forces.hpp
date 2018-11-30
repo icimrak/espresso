@@ -30,6 +30,7 @@
 #include "grid.hpp"
 #include "particle_data.hpp"
 #include "utils/math/triangle_functions.hpp"
+#include "grid_based_algorithms/lb.hpp"
 
 // set parameters for local forces
 int oif_local_forces_set_params(int bond_type, double r0, double ks,
@@ -171,7 +172,6 @@ inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3,
 
   */
   if (iaparams->p.oif_local_forces.kal > TINY_OIF_ELASTICITY_COEFFICIENT) {
-
     auto handle_triangle = [](double kal, double A0, Vector3d const &fp1,
                               Vector3d const &fp2, Vector3d const &fp3,
                               double force1[3], double force2[3],
@@ -206,6 +206,53 @@ inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3,
                     iaparams->p.oif_local_forces.A02, fp2, fp3, fp4, force2,
                     force3, force4);
   }
+  
+  //#ifdef LB_VARIABLE_VISCOSITY
+    /* variable viscosity of the inner fluid
+       in the case that viscosity of the inner fluid of the cell is different from the viscosity of the fluid surrounding the cell
+  */
+  //if (iaparams->p.oif_local_forces.fluid_visc > TINY_OIF_ELASTICITY_COEFFICIENT) {
+    // we have two triangles to handle, since the oif_local_forces are bound to edges and thier two adjacent triangles
+    //auto handle_triangle = [](double fluid_visc, Vector3d const &fp1,
+          //                    Vector3d const &fp2, Vector3d const &fp3) {
+
+// tu treba dorobit to flagovanie. na vstupe mas vector fp1, fp2, fp3 - to su tvoje body ABC
+
+// nechavam tu nejake kusky kodu, aby si videl, ze sa daju vectory scitava priamo, nielen po zlozkach, a tak dalej....
+//      auto const h = (1. / 3.) * (fp1 + fp2 + fp3);
+//      auto const A = Utils::area_triangle(fp1, fp2, fp3);
+
+// takto sa da vypocitat dlzka vektora
+//      auto const m1_length = m1.norm();
+
+// Tu treba detekovat vsetky body Q, ktore lezia v trojuholniku fp1,fp2,fp3 a maju celociselne y-ove a z-ove suradnice. Ak vies, ze Q ma suradnice (qx,qy,qz), tak este treba zistit, ci mrezovy bod (floor(qx),qy,qz) leziaci nalavo trojuholnika je vnutri bunky  a ten napravo (floor(qx) + 1,qy,qz) zase zvonku bunky, alebo je to naopak. To sa zisti podla orientacie trojuholnika. Totiz poradie bodov fp1,fp2,fp3 je dane vzdy tak, ze normalovy vector vypocitany ako vektorovy sucin fp1fp2 x fp1fp3 ukazuje smerom dovnutra bunky. Normalovy vector vies ziskat ako
+//get_n_triangle(fp1, fp2, fp3).normalize();
+// Postup, ako sa zisti, ci si vo vnutri alebo vonku ti posielam mailom so subjektom "vonku ci vo vnutri"
+
+
+
+// pokial uz vies, ze chces nastavit hodnotu viskozity pre konkretny bod priestoru so suradnicami XX,YY,ZZ, tak sa to da takto:
+//        najprv si ziskas index v linearnom poli
+//        int index = get_linear_index(XX, YY, ZZ, lblattice.halo_grid);
+//        a teraz nastavis novu hodnotu pre premenlivu viskozitu
+//          lbfields[index].var_visc_gamma_shear = NEJAKA_HODNOTA;
+//    tu NEJAKA_HODNOTA vypocitas ako
+      //    double NEJAKA_HODNOTA = 1. - 2. / (6. * (fluid_visc) * lbpar.tau /(lbpar.agrid * lbpar.agrid) + 1.);
+          //printf("%lf ",NEJAKA_HODNOTA);
+//
+// toto je zobrate z vypoctu gamma_shear z lb.cpp, funkcia lb_reinit_parameters() 
+
+
+   // };
+
+    // it is important to use the right order. Particles fp1, fp2, fp3. fp4 are given such that fp2fp3 is the edge. Since in the bending part, the normals are computed from triangles fp2fp1fp3 and fp2fp3fp4, we need to keep this order of points.  
+   // handle_triangle(iaparams->p.oif_local_forces.fluid_visc, fp2, fp1, fp3);
+   // handle_triangle(iaparams->p.oif_local_forces.fluid_visc, fp2, fp3, fp4);
+//  }
+//  #endif
+  
+  
+  
   return 0;
 }
 

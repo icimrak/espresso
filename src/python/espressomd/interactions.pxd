@@ -328,6 +328,7 @@ cdef extern from "bonded_interactions/bonded_interaction_data.hpp":
         double ka_g
         double V0
         double kv
+        double inner_fluid_visc
 
 #* Parameters for oif_local_forces */
     cdef struct Oif_local_forces_bond_parameters:
@@ -510,7 +511,7 @@ cdef extern from "bonded_interactions/angle_cossquare.hpp":
 cdef extern from "bonded_interactions/subt_lj.hpp":
     int subt_lj_set_params(int bond_type)
 cdef extern from "object-in-fluid/oif_global_forces.hpp":
-    int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g, double V0, double kv)
+    int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g, double V0, double kv, double inner_fluid_visc)
 cdef extern from "object-in-fluid/oif_local_forces.hpp":
     int oif_local_forces_set_params(int bond_type, double r0, double ks, double kslin, double phi0, double kb, double A01, double A02, double kal, double kvisc)
 cdef extern from "object-in-fluid/out_direction.hpp":
