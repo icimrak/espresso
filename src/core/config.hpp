@@ -132,11 +132,6 @@ extern const char *ESPRESSO_VERSION;
 #define SHAKE_MAX_ITERATIONS 1000
 #endif
 
-/** maximal number of objects in the object-in-fluid framework. */
-#ifndef MAX_OBJECTS_IN_FLUID
-#define MAX_OBJECTS_IN_FLUID 10000
-#endif
-
 /** number of fluid components for lattice Boltzmann  */
 #ifndef LB_COMPONENTS
 #ifdef SHANCHEN

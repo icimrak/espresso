@@ -1971,23 +1971,6 @@ static void lb_prepare_communication() {
 void lb_reinit_parameters() {
   int i;
 
-#ifdef LB_VARIABLE_VISCOSITY
-  /** initializes the variable viscosity fields, all the fields will be constant with viscosity values given by lbfluid. */
-  for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
-    for (int y = 0; y < lblattice.halo_grid[1]; ++y) {
-      for (int z = 0; z < lblattice.halo_grid[2]; ++z) {
-        int index = get_linear_index(x, y, z, lblattice.halo_grid);
-          lbfields[index].var_visc_gamma_shear = 1. - 2. / (6. * lbpar.viscosity * lbpar.tau /
-                                                                (lbpar.agrid * lbpar.agrid) +
-                                                            1.);
-          //lbfields[index].var_visc_gamma_bulk = 1. - 2. / (9. * lbpar.bulk_viscosity * lbpar.tau /
-          //                                                      (lbpar.agrid * lbpar.agrid) +
-          //                                                  1.);
-      }
-    }
-  }
-#endif
-
   if (lbpar.viscosity > 0.0) {
     /* Eq. (80) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007). */
     // unit conversion: viscosity

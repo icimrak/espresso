@@ -49,6 +49,7 @@
 #include "nemd.hpp"
 #include "nonbonded_interactions/nonbonded_interaction_data.hpp"
 #include "npt.hpp"
+#include "object-in-fluid/oif_global_forces.hpp"
 #include "particle_data.hpp"
 #include "pressure.hpp"
 #include "rattle.hpp"
@@ -220,6 +221,10 @@ void integrate_vv(int n_steps, int reuse_forces) {
   // necessary calculates them
   immersed_boundaries.init_volume_conservation();
 #endif
+#ifdef LB_VARIABLE_VISCOSITY
+  flag_lbnodes_variable_visc();
+#endif
+
 
   /* if any method vetoes (P3M not initialized), immediately bail out */
   if (check_runtime_errors())

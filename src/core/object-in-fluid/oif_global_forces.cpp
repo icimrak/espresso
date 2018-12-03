@@ -70,6 +70,28 @@ int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g,
  *  !!! loop over particles from domain_decomposition !!!
  */
 
+#ifdef LB_VARIABLE_VISCOSITY
+void flag_lbnodes_variable_visc() { 
+  /** initializes the variable viscosity fields, all the fields will be constant with viscosity values given by lbfluid. */
+  for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
+    for (int y = 0; y < lblattice.halo_grid[1]; ++y) {
+      for (int z = 0; z < lblattice.halo_grid[2]; ++z) {
+        int index = get_linear_index(x, y, z, lblattice.halo_grid);
+          lbfields[index].var_visc_gamma_shear = 1. - 2. / (6. * lbpar.viscosity * lbpar.tau /
+                                                                (lbpar.agrid * lbpar.agrid) +
+                                                            1.);
+          //lbfields[index].var_visc_gamma_bulk = 1. - 2. / (9. * lbpar.bulk_viscosity * lbpar.tau /
+          //                                                      (lbpar.agrid * lbpar.agrid) +
+          //                                                  1.);
+      }
+    }
+  }
+  
+  // NEXT, we continue with reflagging over all cells. TODO.
+}
+#endif
+
+
 void calc_oif_global(double *area_volume,
                      int molType) { // first-fold-then-the-same approach
   double partArea = 0.0;
@@ -280,3 +302,4 @@ void add_oif_global_forces(double *area_volume,
 }
 
 int max_oif_objects = 0;
+bool oif_objects_up_to_date = false;

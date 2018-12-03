@@ -67,6 +67,7 @@ if VIRTUAL_SITES:
 
 if OIF_GLOBAL_FORCES:
     setable_properties.append("max_oif_objects")
+    setable_properties.append("oif_objects_up_to_date")
 
 cdef bool _system_created = False
 
@@ -403,6 +404,19 @@ cdef class System(object):
                 global max_oif_objects
                 max_oif_objects = v
                 mpi_bcast_parameter(FIELD_MAX_OIF_OBJECTS)
+
+        property oif_objects_up_to_date:
+            """Whether no objects have been deleted nor created after the last (re-)flagging of the fluid  - for variable viscosity - as per the object_in_fluid method.
+
+            """
+
+            def __get__(self):
+                return oif_objects_up_to_date
+
+            def __set__(self, v):
+                global oif_objects_up_to_date
+                oif_objects_up_to_date = v
+                mpi_bcast_parameter(FIELD_OIF_OBJECTS_UP_TO_DATE)
 
     def change_volume_and_rescale_particles(self, d_new, dir="xyz"):
         """Change box size and rescale particle coordinates.

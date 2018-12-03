@@ -148,6 +148,7 @@ enum Fields {
   /** index of \ref langevin_gamma_rotation */
   FIELD_LANGEVIN_GAMMA_ROTATION,
   FIELD_MAX_OIF_OBJECTS, // soft objects as per the object-in-fluid method
+  FIELD_OIF_OBJECTS_UP_TO_DATE, // soft objects as per the object-in-fluid method
   /** index of \ref n_thermalized_bonds */
   FIELD_THERMALIZEDBONDS,
   FIELD_FORCE_CAP,
