@@ -111,7 +111,10 @@ void calc_oif_global(double *area_volume,
 
   int test = 0;
 
+  int ICi=0;
   for (auto &p : local_cells.particles()) {
+    printf("ICi:n %d\n",ICi);
+    ICi++;
     int j = 0;
     p1 = &p;
     while (j < p1->bl.n) {
