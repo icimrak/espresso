@@ -2146,6 +2146,63 @@ class HarmonicBond(BondedInteraction):
         harmonic_set_params(
             self._bond_id, self._params["k"], self._params["r_0"], self._params["r_cut"])
 
+class ViscousBond(BondedInteraction):
+
+    def __init__(self, *args, **kwargs):
+        """
+        ViscousBond initializer. Used to instantiate a ViscousBond identifier
+        with a given set of parameters.
+
+        Parameters
+        ----------
+        k : :obj:`float`
+            Specifies the magnitude of the bond interaction.
+        r_0 : :obj:`float`
+              Specifies the equilibrium length of the bond.
+        r_cut : :obj:`float`, optional
+                Specifies maximum distance beyond which the bond is considered
+                broken.
+
+        """
+        super(ViscousBond, self).__init__(*args, **kwargs)
+
+    def type_number(self):
+        return BONDED_IA_VISCOUS
+
+    def type_name(self):
+        """Name of interaction type.
+
+        """
+        return "VISCOUS"
+
+    def valid_keys(self):
+        """All parameters that can be set.
+
+        """
+        return "k", "r_0", "r_cut"
+
+    def required_keys(self):
+        """Parameters that have to be set.
+
+        """
+        return "k", "r_0"
+
+    def set_default_params(self):
+        """Sets parameters that are not required to their default value.
+
+        """
+        self._params = {"k": 0., "r_0": 0., "r_cut": 0.}
+
+    def _get_params_from_es_core(self):
+        return \
+            {"k": bonded_ia_params[self._bond_id].p.viscous.k,
+             "r_0": bonded_ia_params[self._bond_id].p.viscous.r,
+             "r_cut": bonded_ia_params[self._bond_id].p.viscous.r_cut}
+
+    def _set_params_in_es_core(self):
+        viscous_set_params(
+            self._bond_id, self._params["k"], self._params["r_0"], self._params["r_cut"])
+
 if ELECTROSTATICS:
     class BondedCoulomb(BondedInteraction):
 

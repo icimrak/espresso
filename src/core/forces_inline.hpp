@@ -30,6 +30,7 @@
 #include "bonded_interactions/dihedral.hpp"
 #include "bonded_interactions/fene.hpp"
 #include "bonded_interactions/harmonic.hpp"
+#include "bonded_interactions/viscous.hpp"
 #include "bonded_interactions/harmonic_dumbbell.hpp"
 #include "bonded_interactions/quartic.hpp"
 #include "bonded_interactions/subt_lj.hpp"
@@ -523,6 +524,9 @@ inline void add_bonded_force(Particle *p1) {
 #endif
       case BONDED_IA_HARMONIC:
         bond_broken = calc_harmonic_pair_force(p1, p2, iaparams, dx, force);
+        break;
+      case BONDED_IA_VISCOUS:
+        bond_broken = calc_viscous_pair_force(p1, p2, iaparams, dx, force);
         break;
       case BONDED_IA_QUARTIC:
         bond_broken = calc_quartic_pair_force(p1, p2, iaparams, dx, force);

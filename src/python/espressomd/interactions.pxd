@@ -348,6 +348,13 @@ cdef extern from "bonded_interactions/bonded_interaction_data.hpp":
         double r_cut
 
 
+#* Parameters for viscous bond Potential */
+    cdef struct Viscous_bond_parameters:
+        double k
+        double r
+        double r_cut
+
+
 #* Parameters for thermalized  bond */
     cdef struct Thermalized_bond_parameters:
         double temp_com
@@ -466,6 +473,7 @@ cdef extern from "bonded_interactions/bonded_interaction_data.hpp":
         Thermalized_bond_parameters thermalized_bond
         Bonded_coulomb_bond_parameters bonded_coulomb
         Bonded_coulomb_p3m_sr_bond_parameters bonded_coulomb_p3m_sr
+        Viscous_bond_parameters viscous
         Harmonic_bond_parameters harmonic
         Harmonic_dumbbell_bond_parameters harmonic_dumbbell
         Angle_bond_parameters angle
@@ -495,6 +503,8 @@ cdef extern from "bonded_interactions/bonded_interaction_data.hpp" namespace "tE
 
 cdef extern from "bonded_interactions/fene.hpp":
     int fene_set_params(int bond_type, double k, double drmax, double r0)
+cdef extern from "bonded_interactions/viscous.hpp":
+    int viscous_set_params(int bond_type, double k, double r, double r_cut)
 cdef extern from "bonded_interactions/harmonic.hpp":
     int harmonic_set_params(int bond_type, double k, double r, double r_cut)
 cdef extern from "bonded_interactions/dihedral.hpp":
@@ -557,6 +567,7 @@ cdef extern from "bonded_interactions/bonded_interaction_data.hpp":
         BONDED_IA_NONE = -1,
         BONDED_IA_FENE,
         BONDED_IA_HARMONIC,
+        BONDED_IA_VISCOUS,
         BONDED_IA_HARMONIC_DUMBBELL,
         BONDED_IA_BONDED_COULOMB,
         BONDED_IA_BONDED_COULOMB_P3M_SR,

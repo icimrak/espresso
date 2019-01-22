@@ -9,6 +9,7 @@ add_library(bonded_interactions SHARED
     dihedral.cpp
     fene.cpp
     harmonic.cpp
+    viscous.cpp
     harmonic_dumbbell.cpp
     quartic.cpp
     subt_lj.cpp

@@ -24,6 +24,11 @@ void recalc_maximal_cutoff_bonded() {
           (max_cut_bonded < bonded_ia_params[i].p.harmonic.r_cut))
         max_cut_bonded = bonded_ia_params[i].p.harmonic.r_cut;
       break;
+    case BONDED_IA_VISCOUS:
+      if ((bonded_ia_params[i].p.viscous.r_cut > 0) &&
+          (max_cut_bonded < bonded_ia_params[i].p.viscous.r_cut))
+        max_cut_bonded = bonded_ia_params[i].p.viscous.r_cut;
+      break;
     case BONDED_IA_THERMALIZED_DIST:
       if ((bonded_ia_params[i].p.thermalized_bond.r_cut > 0) &&
           (max_cut_bonded < bonded_ia_params[i].p.thermalized_bond.r_cut))

@@ -16,6 +16,8 @@ enum BondedInteraction {
       (to be combined with Lennard-Jones). */
   BONDED_IA_FENE,
   /** Type of bonded interaction is a HARMONIC potential. */
+  BONDED_IA_VISCOUS,
+  /** Type of bonded interaction is a VISCOUS potential. */
   BONDED_IA_HARMONIC,
   /** Type of bonded interaction is a HARMONIC_DUMBBELL potential. */
   BONDED_IA_HARMONIC_DUMBBELL,
@@ -110,6 +112,13 @@ struct Oif_local_forces_bond_parameters {
 
 /** Parameters for harmonic bond Potential */
 struct Harmonic_bond_parameters {
+  double k;
+  double r;
+  double r_cut;
+};
+
+/** Parameters for viscous bond Potential */
+struct Viscous_bond_parameters {
   double k;
   double r;
   double r_cut;
@@ -290,6 +299,7 @@ union Bond_parameters {
   Oif_global_forces_bond_parameters oif_global_forces;
   Oif_local_forces_bond_parameters oif_local_forces;
   Harmonic_bond_parameters harmonic;
+  Viscous_bond_parameters viscous;
 #ifdef ROTATION
   Harmonic_dumbbell_bond_parameters harmonic_dumbbell;
 #endif
