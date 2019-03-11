@@ -35,11 +35,13 @@ system.time_step = 0.01
 system.min_global_cut = 2.0
 if espressomd.has_features('LB'):
     lbf = espressomd.lb.LBFluid(
-        agrid=0.5, visc=1.3, dens=1.5, tau=0.01, fric=2.0)
+        agrid=0.5, visc=1.3, dens=1.5, tau=0.01)
     system.actors.add(lbf)
 
 system.part.add(pos=[1.0] * 3)
 system.part.add(pos=[1.0, 1.0, 2.0])
+if espressomd.has_features('EXCLUSIONS'):
+    system.part.add(pos=[2.0] * 3, exclusions=[0, 1])
 if espressomd.has_features('ELECTROSTATICS'):
     system.part[0].q = 1
     system.part[1].q = -1

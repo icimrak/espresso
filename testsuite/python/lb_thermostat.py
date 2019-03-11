@@ -34,8 +34,9 @@ TIME_STEP = 0.01
 LB_PARAMS = {'agrid': AGRID,
              'dens': DENS,
              'visc': VISC,
-             'fric': 2.0,
-             'tau': TIME_STEP}
+             'tau': TIME_STEP,
+             'kT': KT,
+             'seed': 123}
 
 
 class LBThermostatCommon(object):
@@ -52,16 +53,16 @@ class LBThermostatCommon(object):
         self.system.actors.add(self.lbf)
         self.system.part.add(
             pos=np.random.random((250, 3)) * self.system.box_l)
-        self.system.thermostat.set_lb(kT=KT)
+        self.system.thermostat.set_lb(LB_fluid=self.lbf, seed=5, gamma=2.0)
 
     def test_velocity_distribution(self):
         self.prepare()
-        self.system.integrator.run(100)
+        self.system.integrator.run(200)
         N = len(self.system.part)
         loops = 250
         v_stored = np.zeros((N * loops, 3))
         for i in range(loops):
-            self.system.integrator.run(10)
+            self.system.integrator.run(15)
             v_stored[i * N:(i + 1) * N, :] = self.system.part[:].v
         minmax = 5
         n_bins = 5
@@ -78,7 +79,7 @@ class LBThermostatCommon(object):
 
 
 @ut.skipIf(not espressomd.has_features(
-    ['LB']) or espressomd.has_features("SHANCHEN"), "Skipping test due to missing features.")
+    ['LB']), "Skipping test due to missing features.")
 class LBCPUThermostat(ut.TestCase, LBThermostatCommon):
 
     """Test for the CPU implementation of the LB."""
@@ -88,7 +89,7 @@ class LBCPUThermostat(ut.TestCase, LBThermostatCommon):
 
 
 @ut.skipIf(not espressomd.has_features(
-    ['LB_GPU']) or espressomd.has_features("SHANCHEN"), "Skipping test due to missing features.")
+    ['LB_GPU']), "Skipping test due to missing features.")
 class LBGPUThermostat(ut.TestCase, LBThermostatCommon):
 
     """Test for the GPU implementation of the LB."""

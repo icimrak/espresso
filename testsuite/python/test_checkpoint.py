@@ -21,6 +21,7 @@ import numpy as np
 import espressomd
 import espressomd.checkpointing
 import espressomd.virtual_sites
+import tests_common
 
 
 class CheckpointTest(ut.TestCase):
@@ -42,7 +43,7 @@ class CheckpointTest(ut.TestCase):
             np.copy(self.lbf[1, 1, 1].velocity), np.array([0.1, 0.2, 0.3]))
         state = self.lbf.get_params()
         reference = {'agrid': 0.5, 'visc': 1.3,
-                     'dens': 1.5, 'tau': 0.01, 'fric': 2.0}
+                     'dens': 1.5, 'tau': 0.01}
         self.assertDictContainsSubset(reference, state)
 
     def test_variables(self):
@@ -119,6 +120,15 @@ class CheckpointTest(ut.TestCase):
         self.assertEqual(coldet.mode, "bind_centers")
         self.assertAlmostEqual(coldet.distance, 0.11, delta=1E-9)
         self.assertTrue(coldet.bond_centers, system.bonded_inter[0])
+
+    @ut.skipIf(not espressomd.has_features("EXCLUSIONS"), "Skipped because feature EXCLUSIONS missing.")
+    def test_exclusions(self):
+        self.assertTrue(
+            tests_common.lists_contain_same_elements(system.part[0].exclusions, [2]))
+        self.assertTrue(
+            tests_common.lists_contain_same_elements(system.part[1].exclusions, [2]))
+        self.assertTrue(
+            tests_common.lists_contain_same_elements(system.part[2].exclusions, [0, 1]))
 
 
 if __name__ == '__main__':

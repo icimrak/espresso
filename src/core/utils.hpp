@@ -28,7 +28,7 @@
  *
 */
 
-#include "Vector.hpp"
+#include "utils/Vector.hpp"
 #include "utils/constants.hpp"
 #include "utils/math/sqr.hpp"
 
@@ -50,17 +50,6 @@ template <typename T1, typename T2> double scalar(const T1 &a, const T2 &b) {
 
 /** calculates the squared length of a vector */
 template <typename T> double sqrlen(T const &v) { return scalar(v, v); }
-
-/** calculates the length of a vector */
-inline double normr(double v[3]) { return std::sqrt(sqrlen(v)); }
-
-/** calculates unit vector */
-inline void unit_vector(double v[3], double y[3]) {
-  const double d = normr(v);
-
-  for (int i = 0; i < 3; i++)
-    y[i] = v[i] / d;
-}
 
 /** calculates the vector product c of two vectors a and b */
 template <typename T, typename U, typename V>
@@ -95,6 +84,10 @@ inline int get_linear_index(int a, int b, int c, const Vector3i &adim) {
   return (a + adim[0] * (b + adim[1] * c));
 }
 
+inline int get_linear_index(const Vector3i &ind, const Vector3i &adim) {
+  return get_linear_index(ind[0], ind[1], ind[2], adim);
+}
+
 /** get the position a[] from the linear index in a 3D grid
  *  of dimensions adim[].
  *
@@ -119,9 +112,9 @@ inline void get_grid_pos(int i, int *a, int *b, int *c, const Vector3i &adim) {
 /*************************************************************/
 /*@{*/
 
-/** returns the distance between two position.
- *  \param pos1 Position one.
- *  \param pos2 Position two.
+/** Calculate the distance between two positions.
+ *  \param a Position one.
+ *  \param b Position two.
  */
 inline double distance2(const Vector3d &a, const Vector3d &b) {
   return (a - b).norm2();

@@ -22,8 +22,8 @@
  *
  *  This file contains functions for the cell system.
  *
- *  For more information on cells, see cells.hpp
- *   */
+ *  Implementation of cells.hpp.
+ */
 #include "cells.hpp"
 #include "algorithm/link_cell.hpp"
 #include "communication.hpp"
@@ -57,8 +57,8 @@ CellPList local_cells = {nullptr, 0, 0};
 CellPList ghost_cells = {nullptr, 0, 0};
 
 /** Type of cell structure in use */
-CellStructure cell_structure = {/* type */ CELL_STRUCTURE_NONEYET,
-                                /* use_verlet_list*/ true};
+CellStructure cell_structure = {
+    CELL_STRUCTURE_NONEYET, true, {}, {}, {}, {}, nullptr, nullptr};
 
 double max_range = 0.0;
 
@@ -157,8 +157,7 @@ std::vector<std::pair<int, int>> mpi_get_pairs(double distance) {
 /************************************************************/
 /*@{*/
 
-/** Switch for choosing the topology release function of a certain
-    cell system. */
+/** Choose the topology release function of a certain cell system. */
 static void topology_release(int cs) {
   switch (cs) {
   case CELL_STRUCTURE_NONEYET:
@@ -184,8 +183,7 @@ static void topology_release(int cs) {
   }
 }
 
-/** Switch for choosing the topology init function of a certain
-    cell system. */
+/** Choose the topology init function of a certain cell system. */
 void topology_init(int cs, CellPList *local) {
   /** broadcast the flag for using Verlet list */
   boost::mpi::broadcast(comm_cart, cell_structure.use_verlet_list, 0);
@@ -298,50 +296,21 @@ int cells_get_n_particles() {
 
 namespace {
 /**
- * @brief Fold coordinates to box and reset the
- *        old position.
+ * @brief Fold coordinates to box and reset the old position.
  */
 void fold_and_reset(Particle &p) {
   fold_position(p.r.p, p.l.i);
 
   p.l.p_old = p.r.p;
 }
-
-/**
- * @brief Extract an indexed particle from a list.
- *
- * Removes a particle from a particle list and
- * from the particle index.
- */
-Particle extract_indexed_particle(ParticleList *sl, int i) {
-  Particle *src = &sl->part[i];
-  Particle *end = &sl->part[sl->n - 1];
-
-  Particle p = std::move(*src);
-
-  assert(p.p.identity <= max_seen_particle);
-  local_particles[p.p.identity] = nullptr;
-
-  if (src != end) {
-    new (src) Particle(std::move(*end));
-  }
-
-  if (realloc_particlelist(sl, --sl->n)) {
-    update_local_particles(sl);
-  } else if (src != end) {
-    local_particles[src->p.identity] = src;
-  }
-  return p;
-}
 } // namespace
 
 /**
  * @brief Sort and fold particles.
  *
- * This function folds the positions of all particles back into
- * the box and puts them back into the correct cells. Particles
- * that do not belong to this node are removed from the cell
- * and returned.
+ * This function folds the positions of all particles back into the
+ * box and puts them back into the correct cells. Particles that do
+ * not belong to this node are removed from the cell and returned.
  *
  * @param cs The cell system to be used.
  * @param cells Cells to iterate over.
@@ -491,13 +460,11 @@ void cells_update_ghosts() {
 }
 
 Cell *find_current_cell(const Particle &p) {
-  auto c = cell_structure.position_to_cell(p.r.p);
-  if (c) {
-    return c;
-  } else if (!p.l.ghost) {
-    // Old pos must lie within the cell system
-    return cell_structure.position_to_cell(p.l.p_old);
-  } else {
+  assert(not resort_particles);
+
+  if (p.l.ghost) {
     return nullptr;
   }
+
+  return cell_structure.position_to_cell(p.l.p_old);
 }

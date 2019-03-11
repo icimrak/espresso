@@ -16,6 +16,10 @@ cdef class ReactionAlgorithm(object):
     reaction algorithm by setting the standard pressure, temperature, and the
     exclusion radius.
 
+    Note: When creating particles the velocities of the new particles are set
+    according the Maxwell-Boltzmann distribution. In this step the mass of the
+    new particle is assumed to equal 1.
+
 
     Parameters
     ----------
@@ -116,7 +120,14 @@ cdef class ReactionAlgorithm(object):
         Returns the acceptance rate for the configuration moves.
 
         """
-        return (1.0 * self.RE.m_accepted_configurational_MC_moves) / self.RE.m_tried_configurational_MC_moves
+        return self.RE.get_acceptance_rate_configurational_moves()
+
+    def get_acceptance_rate_reaction(self, reaction_id):
+        """
+        Returns the acceptance rate for the given reaction.
+
+        """
+        return self.RE.reactions[reaction_id].get_acceptance_rate()
 
     def set_non_interacting_type(self, non_interacting_type):
         """
@@ -226,6 +237,11 @@ cdef class ReactionAlgorithm(object):
                 "No dictionary for relation between types and default charges provided.")
         #check electroneutrality of the provided reaction
         if(self._params["check_for_electroneutrality"]):
+            charges = np.array(list(self._params["default_charges"].values()))
+            if(np.count_nonzero(charges) == 0):
+                # all partices have zero charge
+                # no need to check electroneutrality
+                return
             total_charge_change = 0.0
             for i in range(len(self._params["reactant_coefficients"])):
                 type_here = self._params["reactant_types"][i]
@@ -235,7 +251,6 @@ cdef class ReactionAlgorithm(object):
                 type_here = self._params["product_types"][j]
                 total_charge_change += self._params["product_coefficients"][
                     j] * self._params["default_charges"][type_here]
-            charges = np.array(list(self._params["default_charges"].values()))
             min_abs_nonzero_charge = np.min(
                 np.abs(charges[np.nonzero(charges)[0]]))
             if abs(total_charge_change) / min_abs_nonzero_charge > 1e-10:
@@ -665,7 +680,7 @@ cdef class WidomInsertion(ReactionAlgorithm):
 
     def measure_excess_chemical_potential(self, reaction_id=0):
         """
-        Measures the excess chemical potential in a homogeneous system. Returns the excess chemical potential and the standard error for the excess chemical potential. It assumes that your samples are uncorrelated.
+        Measures the excess chemical potential in a homogeneous system. Returns the excess chemical potential and the standard error for the excess chemical potential. It assumes that your samples are uncorrelated in estimating the standard error.
 
         """
         return self.WidomInsertionPtr.measure_excess_chemical_potential(int(reaction_id))

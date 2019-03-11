@@ -79,9 +79,8 @@ Mmm1dgpuForce::Mmm1dgpuForce(SystemInterface &s,
 
 void Mmm1dgpuForce::setup(SystemInterface &s) {
   if (s.box()[2] <= 0) {
-    std::cerr << "Error: Please set box length before initializing MMM1D!"
-              << std::endl;
-    exit(EXIT_FAILURE);
+    throw std::runtime_error(
+        "Error: Please set box length before initializing MMM1D!");
   }
   if (need_tune == true && s.npart_gpu() > 0) {
     set_params(s.box()[2], coulomb.prefactor, maxPWerror, far_switch_radius,
@@ -242,9 +241,8 @@ void Mmm1dgpuForce::tune(SystemInterface &s, mmm1dgpu_real _maxPWerror,
             maxCut) // we already have our switching radius and only need to
                     // determine the cutoff, i.e. this is the final tuning round
     {
-      std::cerr << "No reasonable Bessel cutoff could be determined."
-                << std::endl;
-      exit(EXIT_FAILURE);
+      throw std::runtime_error(
+          "No reasonable Bessel cutoff could be determined.");
     }
 
     set_params(0, 0, _maxPWerror, far_switch_radius, bessel_cutoff);
@@ -257,9 +255,8 @@ void Mmm1dgpuForce::set_params(mmm1dgpu_real _boxz,
                                mmm1dgpu_real _far_switch_radius,
                                int _bessel_cutoff, bool manual) {
   if (_boxz > 0 && _far_switch_radius > _boxz) {
-    std::cout << "switching radius must not be larger than box length"
-              << std::endl;
-    exit(EXIT_FAILURE);
+    throw std::runtime_error(
+        "switching radius must not be larger than box length");
   }
   mmm1dgpu_real _far_switch_radius_2 = _far_switch_radius * _far_switch_radius;
   mmm1dgpu_real _uz = 1.0 / _boxz;
@@ -319,7 +316,7 @@ void Mmm1dgpuForce::set_params(mmm1dgpu_real _boxz,
 __global__ void forcesKernel(const mmm1dgpu_real *__restrict__ r,
                              const mmm1dgpu_real *__restrict__ q,
                              mmm1dgpu_real *__restrict__ force, int N,
-                             int pairs, int tStart = 0, int tStop = -1) {
+                             int pairs, int tStart, int tStop) {
   if (tStop < 0)
     tStop = N * N;
 
@@ -406,7 +403,7 @@ __global__ void forcesKernel(const mmm1dgpu_real *__restrict__ r,
 __global__ void energiesKernel(const mmm1dgpu_real *__restrict__ r,
                                const mmm1dgpu_real *__restrict__ q,
                                mmm1dgpu_real *__restrict__ energy, int N,
-                               int pairs, int tStart = 0, int tStop = -1) {
+                               int pairs, int tStart, int tStop) {
   if (tStop < 0)
     tStop = N * N;
 
@@ -474,7 +471,7 @@ __global__ void energiesKernel(const mmm1dgpu_real *__restrict__ r,
 }
 
 __global__ void vectorReductionKernel(mmm1dgpu_real *src, mmm1dgpu_real *dst,
-                                      int N, int tStart = 0, int tStop = -1) {
+                                      int N, int tStart, int tStop) {
   if (tStop < 0)
     tStop = N * N;
 
@@ -503,20 +500,19 @@ void Mmm1dgpuForce::computeForces(SystemInterface &s) {
   setup(s);
 
   if (pairs < 0) {
-    std::cerr << "MMM1D was not initialized correctly" << std::endl;
-    exit(EXIT_FAILURE);
+    throw std::runtime_error("MMM1D was not initialized correctly");
   }
 
   if (pairs) // if we calculate force pairs, we need to reduce them to forces
   {
     int blocksRed = s.npart_gpu() / numThreads + 1;
     KERNELCALL(forcesKernel, numBlocks(s), numThreads, s.rGpuBegin(),
-               s.qGpuBegin(), dev_forcePairs, s.npart_gpu(), pairs)
+               s.qGpuBegin(), dev_forcePairs, s.npart_gpu(), pairs, 0, -1)
     KERNELCALL(vectorReductionKernel, blocksRed, numThreads, dev_forcePairs,
-               s.fGpuBegin(), s.npart_gpu())
+               s.fGpuBegin(), s.npart_gpu(), 0, -1)
   } else {
     KERNELCALL(forcesKernel, numBlocks(s), numThreads, s.rGpuBegin(),
-               s.qGpuBegin(), s.fGpuBegin(), s.npart_gpu(), pairs)
+               s.qGpuBegin(), s.fGpuBegin(), s.npart_gpu(), pairs, 0, -1)
   }
 }
 
@@ -540,14 +536,13 @@ void Mmm1dgpuForce::computeEnergy(SystemInterface &s) {
   setup(s);
 
   if (pairs < 0) {
-    std::cerr << "MMM1D was not initialized correctly" << std::endl;
-    exit(EXIT_FAILURE);
+    throw std::runtime_error("MMM1D was not initialized correctly");
   }
   int shared = numThreads * sizeof(mmm1dgpu_real);
 
   KERNELCALL_shared(energiesKernel, numBlocks(s), numThreads, shared,
                     s.rGpuBegin(), s.qGpuBegin(), dev_energyBlocks,
-                    s.npart_gpu(), 0);
+                    s.npart_gpu(), 0, 0, -1);
   KERNELCALL_shared(sumKernel, 1, numThreads, shared, dev_energyBlocks,
                     numBlocks(s));
   KERNELCALL(scaleAndAddKernel, 1, 1, &(((CUDA_energy *)s.eGpu())->coulomb),
@@ -567,7 +562,7 @@ float Mmm1dgpuForce::force_benchmark(SystemInterface &s) {
   cuda_safe_mem(cudaEventCreate(&eventStop));
   cuda_safe_mem(cudaEventRecord(eventStart, stream[0]));
   KERNELCALL(forcesKernel, numBlocks(s), numThreads, s.rGpuBegin(),
-             s.qGpuBegin(), dev_f_benchmark, s.npart_gpu(), 0)
+             s.qGpuBegin(), dev_f_benchmark, s.npart_gpu(), 0, 0, -1)
   cuda_safe_mem(cudaEventRecord(eventStop, stream[0]));
   cuda_safe_mem(cudaEventSynchronize(eventStop));
   cuda_safe_mem(cudaEventElapsedTime(&elapsedTime, eventStart, eventStop));
