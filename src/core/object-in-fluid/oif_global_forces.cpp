@@ -73,7 +73,7 @@ int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g,
 #ifdef LB_VARIABLE_VISCOSITY
 void flag_lbnodes_variable_visc() { 
   /** initializes the variable viscosity fields, all the fields will be constant with viscosity values given by lbfluid. */
-  for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
+ /* for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
     for (int y = 0; y < lblattice.halo_grid[1]; ++y) {
       for (int z = 0; z < lblattice.halo_grid[2]; ++z) {
         int index = get_linear_index(x, y, z, lblattice.halo_grid);
@@ -85,7 +85,7 @@ void flag_lbnodes_variable_visc() {
           //                                                  1.);
       }
     }
-  }
+  }*/
   
   // NEXT, we continue with reflagging over all cells. TODO.
 }

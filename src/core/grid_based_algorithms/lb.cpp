@@ -805,11 +805,11 @@ inline std::array<T, 19> lb_relax_modes(Lattice::index_t index,
   /* variable fluid viscosity */
   double gamma_shear_tmp = lbfields[index].var_visc_gamma_shear;
   double m5, m6, m7, m8, m9;
-  m5 = pi_eq[1] + gamma_shear_tmp * (mode[5] - pi_eq[1]);
-  m6 = pi_eq[2] + gamma_shear_tmp * (mode[6] - pi_eq[2]);
-  m7 = pi_eq[3] + gamma_shear_tmp * (mode[7] - pi_eq[3]);
-  m8 = pi_eq[4] + gamma_shear_tmp * (mode[8] - pi_eq[4]);
-  m9 = pi_eq[5] + gamma_shear_tmp * (mode[9] - pi_eq[5]);
+  m5 = pi_eq[1] + gamma_shear_tmp * (modes[5] - pi_eq[1]);
+  m6 = pi_eq[2] + gamma_shear_tmp * (modes[6] - pi_eq[2]);
+  m7 = pi_eq[3] + gamma_shear_tmp * (modes[7] - pi_eq[3]);
+  m8 = pi_eq[4] + gamma_shear_tmp * (modes[8] - pi_eq[4]);
+  m9 = pi_eq[5] + gamma_shear_tmp * (modes[9] - pi_eq[5]);
   return {{modes[0], modes[1], modes[2], modes[3],
            /* relax the stress modes */
            pi_eq[0] + lbpar.gamma_bulk * (modes[4] - pi_eq[0]),
@@ -1372,16 +1372,16 @@ void lb_calc_local_fields(Lattice::index_t index, double *rho, double *j,
 #ifdef LB_VARIABLE_VISCOSITY
   /* variable fluid viscosity */
   double gamma_shear_tmp = lbfields[index].var_visc_gamma_shear;
-  mode[5] = modes_from_pi_eq[1] +
-            (0.5 + 0.5 * gamma_shear_tmp) * (mode[5] - modes_from_pi_eq[1]);
-  mode[6] = modes_from_pi_eq[2] +
-            (0.5 + 0.5 * gamma_shear_tmp) * (mode[6] - modes_from_pi_eq[2]);
-  mode[7] = modes_from_pi_eq[3] +
-            (0.5 + 0.5 * gamma_shear_tmp) * (mode[7] - modes_from_pi_eq[3]);
-  mode[8] = modes_from_pi_eq[4] +
-            (0.5 + 0.5 * gamma_shear_tmp) * (mode[8] - modes_from_pi_eq[4]);
-  mode[9] = modes_from_pi_eq[5] +
-            (0.5 + 0.5 * gamma_shear_tmp) * (mode[9] - modes_from_pi_eq[5]);
+  modes[5] = modes_from_pi_eq[1] +
+            (0.5 + 0.5 * gamma_shear_tmp) * (modes[5] - modes_from_pi_eq[1]);
+  modes[6] = modes_from_pi_eq[2] +
+            (0.5 + 0.5 * gamma_shear_tmp) * (modes[6] - modes_from_pi_eq[2]);
+  modes[7] = modes_from_pi_eq[3] +
+            (0.5 + 0.5 * gamma_shear_tmp) * (modes[7] - modes_from_pi_eq[3]);
+  modes[8] = modes_from_pi_eq[4] +
+            (0.5 + 0.5 * gamma_shear_tmp) * (modes[8] - modes_from_pi_eq[4]);
+  modes[9] = modes_from_pi_eq[5] +
+            (0.5 + 0.5 * gamma_shear_tmp) * (modes[9] - modes_from_pi_eq[5]);
 #endif
   // Transform the stress tensor components according to the modes that
   // correspond to those used by U. Schiller. In terms of populations this
