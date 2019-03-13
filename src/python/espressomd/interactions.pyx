@@ -3259,6 +3259,54 @@ class OifLocalForces(BondedInteraction):
         oif_local_forces_set_params(
             self._bond_id, self._params["r0"], self._params["ks"], self._params["kslin"], self._params["phi0"], self._params["kb"], self._params["A01"], self._params["A02"], self._params["kal"], self._params["kvisc"])
 
+
+class OifLaser(BondedInteraction):
+
+    """
+    Part of the :ref:`Object-in-fluid` method.
+
+    """
+
+    def type_number(self):
+        return BONDED_IA_OIF_LASER
+
+    def type_name(self):
+        """Name of interaction type.
+
+        """
+        return "OIF_LASER"
+
+    def valid_keys(self):
+        """All parameters that can be set.
+
+        """
+        return "klas", "lasX", "lasY", "lasZ"
+
+    def required_keys(self):
+        """Parameters that have to be set.
+
+        """
+        return "klas", "lasX", "lasY", "lasZ"
+
+    def set_default_params(self):
+        """Sets parameters that are not required to their default value.
+
+        """
+        self._params = {"klas": 0., "lasX": 1., "lasY": 0.,
+                        "lasZ": 0.}
+
+    def _get_params_from_es_core(self):
+        return \
+            {"klas": bonded_ia_params[self._bond_id].p.oif_laser.klas,
+             "lasX": bonded_ia_params[self._bond_id].p.oif_laser.lasX,
+             "lasY": bonded_ia_params[self._bond_id].p.oif_laser.lasY,
+             "lasZ": bonded_ia_params[self._bond_id].p.oif_laser.lasZ}
+
+    def _set_params_in_es_core(self):
+        oif_laser_set_params(
+            self._bond_id, self._params["klas"], self._params["lasX"], self._params["lasY"], self._params["lasZ"])
+
+
 IF MEMBRANE_COLLISION == 1:
     class OifOutDirection(BondedInteraction):
 
@@ -3302,6 +3350,7 @@ bonded_interaction_classes = {
     int(BONDED_IA_ANGLE_COSSQUARE): AngleCossquare,
     int(BONDED_IA_OIF_GLOBAL_FORCES): OifGlobalForces,
     int(BONDED_IA_OIF_LOCAL_FORCES): OifLocalForces,
+    int(BONDED_IA_OIF_LASER): OifLaser,
     int(BONDED_IA_OIF_OUT_DIRECTION): OifOutDirection,
     int(BONDED_IA_IBM_TRIEL): IBM_Triel,
     int(BONDED_IA_IBM_TRIBEND): IBM_Tribend,

@@ -17,6 +17,7 @@
 import espressomd
 import numpy as np
 from .oif_utils import *
+from espressomd.interactions import OifLaser
 from espressomd.interactions import OifLocalForces
 from espressomd.interactions import OifGlobalForces
 from espressomd.interactions import OifOutDirection
@@ -661,14 +662,13 @@ class Mesh(object):
             raise Exception("Mesh, min_edge_length: No edges. Quitting.")
         return min_length
 
-    def total_fluid_force(self,lbfluid):
+    def total_fluid_force(self,lbfluid,friction):
         total_force = np.array([0.0, 0.0, 0.0])
-        fric = lbfluid._params["fric"]
         for p in self.points:
             vel_point = p.get_vel()
             pos_point = p.get_pos()
             vel_fluid = lbfluid.get_interpolated_velocity(pos_point)
-            total_force += - fric*(vel_point - vel_fluid)      
+            total_force += - friction*(vel_point - vel_fluid)      
         return total_force
 
     def max_edge_length(self):
@@ -813,7 +813,7 @@ class OifCellType(object):  # analogous to oif_template
 
     def __init__(
         self, nodes_file="", triangles_file="", system=None, resize=(1.0, 1.0, 1.0), ks=0.0, kslin=0.0,
-                 kb=0.0, kal=0.0, kag=0.0, kv=0.0, kvisc=0.0, normal=False, check_orientation=True):
+                 kb=0.0, kal=0.0, kag=0.0, kv=0.0, kvisc=0.0, klas=0.0, lasX=0.0, lasY=0.0, lasZ=0.0, normal=False, check_orientation=True):
         if (system is None) or (not isinstance(system, espressomd.System)):
             raise Exception(
                 "OifCellType: No system provided or wrong type. Quitting.")
@@ -846,6 +846,10 @@ class OifCellType(object):  # analogous to oif_template
         self.kal = kal
         self.kag = kag
         self.kv = kv
+        self.klas = klas
+        self.lasX = lasX
+        self.lasY = lasY
+        self.lasZ = lasZ
         self.kvisc = kvisc
         self.normal = normal
         if (ks != 0.0) or (kslin != 0.0) or (kb != 0.0) or (kal != 0.0) or (kvisc != 0.0):
@@ -869,6 +873,14 @@ class OifCellType(object):  # analogous to oif_template
             self.global_force_interaction = OifGlobalForces(
                 A0_g=surface, ka_g=kag, V0=volume, kv=kv)
             self.system.bonded_inter.add(self.global_force_interaction)
+        if (klas != 0.0):
+            self.laser_toright_interaction = OifLaser(
+                klas=klas, lasX=lasX, lasY=lasY, lasZ=lasZ)
+            self.system.bonded_inter.add(self.laser_toright_interaction)
+            self.laser_toleft_interaction = OifLaser(
+                klas=klas, lasX=-1.0*lasX, lasY=lasY, lasZ=lasZ)
+            self.system.bonded_inter.add(self.laser_toleft_interaction)
+
 
     def print_info(self):
         print("\nThe following OifCellType was created: ")
@@ -883,6 +895,10 @@ class OifCellType(object):  # analogous to oif_template
         print("\t kal: " + custom_str(self.kal))
         print("\t kag: " + custom_str(self.kag))
         print("\t kv: " + custom_str(self.kv))
+        print("\t klas: " + custom_str(self.klas))
+        print("\t lasX: " + custom_str(self.lasX))
+        print("\t lasY: " + custom_str(self.lasY))
+        print("\t lasZ: " + custom_str(self.lasZ))
         print("\t kvisc: " + custom_str(self.kvisc))
         print("\t normal: " + str(self.normal))
         print("\t resize: " + str(self.resize))
@@ -949,6 +965,19 @@ class OifCell(object):
                 triangle.A.part.add_bond(
                     (self.cell_type.global_force_interaction, triangle.B.part_id,
                      triangle.C.part_id))
+
+        if (self.cell_type.klas != 0.0):
+            for triangle in self.mesh.triangles:
+                center = self.get_origin()
+                if (1.0/3.0*(triangle.A.get_pos()[0] + triangle.B.get_pos()[0] + triangle.C.get_pos()[0]) < center[0]):
+                    triangle.A.part.add_bond(
+                        (self.cell_type.laser_toleft_interaction, triangle.B.part_id,
+                         triangle.C.part_id))
+                else:
+                    triangle.A.part.add_bond(
+                        (self.cell_type.laser_toright_interaction, triangle.B.part_id,
+                         triangle.C.part_id))
+                
 
         # setting the out_direction interaction for membrane collision
         if self.cell_type.mesh.normal is True:
@@ -1060,8 +1089,8 @@ class OifCell(object):
     def min_edge_length(self):
         return self.mesh.min_edge_length()
 
-    def total_fluid_force(self,lbfluid):
-        return self.mesh.total_fluid_force(lbfluid)
+    def total_fluid_force(self,lbfluid,friction):
+        return self.mesh.total_fluid_force(lbfluid,friction)
 
     def max_edge_length(self):
         return self.mesh.max_edge_length()

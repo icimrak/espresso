@@ -106,6 +106,7 @@ THOLE                           requires P3M
 /* Fluid-Structure Interactions (object in fluid) */
 OIF_LOCAL_FORCES
 OIF_GLOBAL_FORCES
+OIF_LASER
 AFFINITY
 MEMBRANE_COLLISION
 

@@ -405,6 +405,8 @@ inline void add_three_body_bonded_stress(Particle *p1) {
       i = i + 3;
     } else if (type == BONDED_IA_OIF_LOCAL_FORCES) {
       i = i + 4;
+    } else if (type == BONDED_IA_OIF_LASER) {
+      i = i + 3;
     } else if (type == BONDED_IA_OIF_OUT_DIRECTION) {
       i = i + 3;
     } else if (type == BONDED_IA_HARMONIC) {

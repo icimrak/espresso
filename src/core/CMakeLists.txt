@@ -121,6 +121,7 @@ set(EspressoCore_SRC
   object-in-fluid/membrane_collision.cpp
   object-in-fluid/oif_global_forces.cpp
   object-in-fluid/oif_local_forces.cpp
+  object-in-fluid/oif_laser.cpp
   object-in-fluid/out_direction.cpp
   observables/CylindricalLBFluxDensityProfileAtParticlePositions.cpp
   observables/CylindricalLBVelocityProfileAtParticlePositions.cpp

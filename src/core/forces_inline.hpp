@@ -66,6 +66,7 @@
 #include "object-in-fluid/membrane_collision.hpp"
 #include "object-in-fluid/oif_global_forces.hpp"
 #include "object-in-fluid/oif_local_forces.hpp"
+#include "object-in-fluid/oif_laser.hpp"
 #include "object-in-fluid/out_direction.hpp"
 #include "thermostat.hpp"
 #ifdef ELECTROSTATICS
@@ -628,6 +629,12 @@ inline void add_bonded_force(Particle *p1) {
         force[2] = force2[2] = force3[2] = 0;
         break;
 #endif
+#ifdef OIF_LASER
+      case BONDED_IA_OIF_LASER:
+        bond_broken = calc_oif_laser(p1, p2, p3, iaparams, force, force2,
+                                     force3);
+        break;
+#endif
       default:
         runtimeErrorMsg() << "add_bonded_force: bond type of atom "
                           << p1->p.identity << " unknown " << type << ","
@@ -769,6 +776,15 @@ inline void add_bonded_force(Particle *p1) {
           p2->f.f[j] += force[j];
           p3->f.f[j] += force3[j];
           p4->f.f[j] += force4[j];
+        }
+        break;
+#endif
+#ifdef OIF_LASER
+      case BONDED_IA_OIF_LASER:
+        for (j = 0; j < 3; j++) {
+          p1->f.f[j] += force[j];
+          p2->f.f[j] += force2[j];
+          p3->f.f[j] += force3[j];
         }
         break;
 #endif

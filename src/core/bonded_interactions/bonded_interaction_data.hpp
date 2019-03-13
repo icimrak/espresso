@@ -44,6 +44,8 @@ enum BondedInteraction {
   BONDED_IA_ANGLE_COSSQUARE,
   /** Type of bonded interaction: oif local forces. */
   BONDED_IA_OIF_LOCAL_FORCES,
+  /** Type of bonded interaction: oif laser forces. */
+  BONDED_IA_OIF_LASER,
   /** Type of bonded interaction: oif global forces. */
   BONDED_IA_OIF_GLOBAL_FORCES,
   /** Type of bonded interaction: determining outward direction of oif membrane.
@@ -106,6 +108,14 @@ struct Oif_local_forces_bond_parameters {
   double A02;
   double kal;
   double kvisc;
+};
+
+/** Parameters for oif_laser */
+struct Oif_laser_bond_parameters {
+  double klas;
+  double lasX;
+  double lasY;
+  double lasZ;
 };
 
 /** Parameters for harmonic bond Potential */
@@ -289,6 +299,7 @@ union Bond_parameters {
   Fene_bond_parameters fene;
   Oif_global_forces_bond_parameters oif_global_forces;
   Oif_local_forces_bond_parameters oif_local_forces;
+  Oif_laser_bond_parameters oif_laser;
   Harmonic_bond_parameters harmonic;
 #ifdef ROTATION
   Harmonic_dumbbell_bond_parameters harmonic_dumbbell;

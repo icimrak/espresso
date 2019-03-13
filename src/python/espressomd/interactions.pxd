@@ -342,6 +342,13 @@ cdef extern from "bonded_interactions/bonded_interaction_data.hpp":
         double kal
         double kvisc
 
+#* Parameters for oif_laser */
+    cdef struct Oif_laser_bond_parameters:
+        double klas
+        double lasX
+        double lasY
+        double lasZ
+
 #* Parameters for harmonic bond Potential */
     cdef struct Harmonic_bond_parameters:
         double k
@@ -464,6 +471,7 @@ cdef extern from "bonded_interactions/bonded_interaction_data.hpp":
         Fene_bond_parameters fene
         Oif_global_forces_bond_parameters oif_global_forces
         Oif_local_forces_bond_parameters oif_local_forces
+        Oif_laser_bond_parameters oif_laser
         Thermalized_bond_parameters thermalized_bond
         Bonded_coulomb_bond_parameters bonded_coulomb
         Bonded_coulomb_p3m_sr_bond_parameters bonded_coulomb_p3m_sr
@@ -514,6 +522,8 @@ cdef extern from "object-in-fluid/oif_global_forces.hpp":
     int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g, double V0, double kv)
 cdef extern from "object-in-fluid/oif_local_forces.hpp":
     int oif_local_forces_set_params(int bond_type, double r0, double ks, double kslin, double phi0, double kb, double A01, double A02, double kal, double kvisc)
+cdef extern from "object-in-fluid/oif_laser.hpp":
+    int oif_laser_set_params(int bond_type, double klas, double lasX, double lasY, double lasZ)
 cdef extern from "object-in-fluid/out_direction.hpp":
     int oif_out_direction_set_params(int bond_type)
 cdef extern from "bonded_interactions/thermalized_bond.hpp":
@@ -571,6 +581,7 @@ cdef extern from "bonded_interactions/bonded_interaction_data.hpp":
         BONDED_IA_ANGLE_COSINE,
         BONDED_IA_ANGLE_COSSQUARE,
         BONDED_IA_OIF_LOCAL_FORCES,
+        BONDED_IA_OIF_LASER,
         BONDED_IA_OIF_GLOBAL_FORCES,
         BONDED_IA_OIF_OUT_DIRECTION,
         BONDED_IA_IBM_TRIEL,
