@@ -71,7 +71,10 @@ int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g,
  */
 
 #ifdef LB_VARIABLE_VISCOSITY
-void flag_lbnodes_variable_visc() { 
+void flag_lbnodes_variable_visc() {
+    //there is initial algorithm
+
+
   /** initializes the variable viscosity fields, all the fields will be constant with viscosity values given by lbfluid. */
  /* for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
     for (int y = 0; y < lblattice.halo_grid[1]; ++y) {
@@ -88,6 +91,16 @@ void flag_lbnodes_variable_visc() {
   }*/
   
   // NEXT, we continue with reflagging over all cells. TODO.
+}
+
+
+
+void reflag_lbnodes_variable_visc(){
+    //there is updating algorithm
+}
+
+void print_lbnodes_variable_visc(){
+  //printing all LB nodes with viscosity
 }
 #endif
 
@@ -224,11 +237,64 @@ void add_oif_global_forces(double *area_volume,
 
   int test = 0;
 
+
+
+//toto je len pokus prerabky
+  for (auto &p : local_cells.particles()) {
+    Vector3d p11, p22, p33;
+    Particle *p1{nullptr}, *p2{nullptr}, *p3{nullptr};
+    Bonded_ia_parameters* iaparams{nullptr};
+    if (calc_vectors_of_triangles(p, p11, p22, p33, p1, p2, p3, molType, iaparams, test)){
+      // unfolded positions correct
+      /// starting code from volume force
+      auto const VOL_norm = get_n_triangle(p11, p22, p33).normalize();
+      auto const VOL_A = area_triangle(p11, p22, p33);
+      auto const VOL_vv = (VOL_volume - iaparams->p.oif_global_forces.V0) /
+                          iaparams->p.oif_global_forces.V0;
+
+      auto const VOL_force = (1.0 / 3.0) * iaparams->p.oif_global_forces.kv *
+                             VOL_vv * VOL_A * VOL_norm;
+      p1->f.f += VOL_force;
+      p2->f.f += VOL_force;
+      p3->f.f += VOL_force;
+      ///  ending code from volume force
+
+      auto const h = (1. / 3.) * (p11 + p22 + p33);
+
+      auto const deltaA = (area - iaparams->p.oif_global_forces.A0_g) /
+                          iaparams->p.oif_global_forces.A0_g;
+
+      auto const m1 = h - p11;
+      auto const m2 = h - p22;
+      auto const m3 = h - p33;
+
+      auto const m1_length = m1.norm();
+      auto const m2_length = m2.norm();
+      auto const m3_length = m3.norm();
+
+      auto const fac = iaparams->p.oif_global_forces.ka_g * VOL_A * deltaA /
+                       (m1_length * m1_length + m2_length * m2_length +
+                        m3_length * m3_length);
+
+      p1->f.f += fac * m1;
+      p2->f.f += fac * m2;
+      p3->f.f += fac * m3;
+    }
+  }
+
+
+
+
+
+
+
+
+/*
   for (auto &p : local_cells.particles()) {
     int j = 0;
     auto p1 = &p;
     while (j < p1->bl.n) {
-      /* bond type */
+      // bond type
       auto const type_num = p1->bl.e[j++];
       auto iaparams = &bonded_ia_params[type_num];
       auto const type = iaparams->type;
@@ -237,7 +303,7 @@ void add_oif_global_forces(double *area_volume,
       if (type == BONDED_IA_OIF_GLOBAL_FORCES &&
           id == molType) { // BONDED_IA_OIF_GLOBAL_FORCES with correct molType
         test++;
-        /* fetch particle 2 */
+        // fetch particle 2
         auto p2 = local_particles[p1->bl.e[j++]];
         if (!p2) {
           runtimeErrorMsg() << "add area: bond broken between particles "
@@ -247,7 +313,7 @@ void add_oif_global_forces(double *area_volume,
                             << p1->bl.n << " max " << p1->bl.max;
           return;
         }
-        /* fetch particle 3 */
+        // fetch particle 3
         // if(n_partners>2){
         auto p3 = local_particles[p1->bl.e[j++]];
         if (!p3) {
@@ -301,8 +367,57 @@ void add_oif_global_forces(double *area_volume,
         j += n_partners;
       }
     }
-  }
+  }*/
 }
+
+bool calc_vectors_of_triangles(Particle &p, Vector3d &p11, Vector3d &p22, Vector3d &p33, Particle* p1, Particle* p2,
+        Particle* p3, int molType, Bonded_ia_parameters* iaparams, int test){
+  int j = 0;
+  p1 = &p;
+  while (j < p1->bl.n) {
+    // bond type
+    auto const type_num = p1->bl.e[j++];
+    iaparams = &bonded_ia_params[type_num];
+    auto const type = iaparams->type;
+    auto const n_partners = iaparams->num;
+    auto const id = p1->p.mol_id;
+    if (type == BONDED_IA_OIF_GLOBAL_FORCES &&
+        id == molType) { // BONDED_IA_OIF_GLOBAL_FORCES with correct molType
+      test++;
+      // fetch particle 2
+      p2 = local_particles[p1->bl.e[j++]];
+      if (!p2) {
+        runtimeErrorMsg() << "add area: bond broken between particles "
+                          << p1->p.identity << " and " << p1->bl.e[j - 1]
+                          << " (particles not stored on the same node - "
+                             "oif_globalforce2); n "
+                          << p1->bl.n << " max " << p1->bl.max;
+        return false;
+      }
+      // fetch particle 3
+      // if(n_partners>2){
+      p3 = local_particles[p1->bl.e[j++]];
+      if (!p3) {
+        runtimeErrorMsg()
+                << "add area: bond broken between particles " << p1->p.identity
+                << ", " << p1->bl.e[j - 2] << " and " << p1->bl.e[j - 1]
+                << " (particles not stored on the same node); n " << p1->bl.n
+                << " max " << p1->bl.max;
+        return false;
+      }
+
+      p11 = unfolded_position(*p1);
+      p22 = p11 + get_mi_vector(p2->r.p, p11);
+      p33 = p11 + get_mi_vector(p3->r.p, p11);
+      return true;
+    } else {
+      j += n_partners;
+    }
+  }
+  return false;
+}
+
+
 
 int max_oif_objects = 0;
 bool oif_objects_up_to_date = false;
