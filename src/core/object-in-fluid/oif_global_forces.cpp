@@ -126,7 +126,7 @@ void calc_oif_global(double *area_volume,
 
   int ICi=0;
   for (auto &p : local_cells.particles()) {
-    printf("ICi:n %d\n",ICi);
+   // printf("ICi:n %d\n",ICi);
     ICi++;
     int j = 0;
     p1 = &p;
@@ -230,7 +230,7 @@ void calc_oif_global(double *area_volume,
                 MPI_COMM_WORLD);
 }
 
-void add_oif_global_forces(double *area_volume,
+void add_oif_global_forces(double const *area_volume,
                            int molType) { // first-fold-then-the-same approach
   double area = area_volume[0];
   double VOL_volume = area_volume[1];

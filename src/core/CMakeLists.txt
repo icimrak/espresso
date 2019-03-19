@@ -45,7 +45,6 @@ set(EspressoCore_SRC
   swimmer_reaction.cpp
   SystemInterface.cpp
   thermostat.cpp
-  topology.cpp
   tuning.cpp
   virtual_sites.cpp
   accumulators/Correlator.cpp
@@ -205,5 +204,5 @@ add_subdirectory(cluster_analysis)
 
 #for preprocessors macros
 #-D + name of definition....for example definition LB will be -DLB
-add_definitions( -DEXTERNAL_FORCES -DMASS -DEXCLUSIONS -DLB -DLB_GPU -DLB_BOUNDARIES -DLB_VARIABLE_VISCOSITY
-        -DSOFT_SPHERE -DOIF_LOCAL_FORCES -DOIF_GLOBAL_FORCES -DMEMBRANE_COLLISION -DIMMERSED_BOUNDARY)
+#add_definitions( -DEXTERNAL_FORCES -DMASS -DEXCLUSIONS -DLB -DLB_GPU -DLB_BOUNDARIES -DLB_VARIABLE_VISCOSITY
+#        -DSOFT_SPHERE -DOIF_LOCAL_FORCES -DOIF_GLOBAL_FORCES -DMEMBRANE_COLLISION -DIMMERSED_BOUNDARY)

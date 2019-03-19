@@ -15,3 +15,15 @@ cmake ../
 make -j 3
 make -j 3
 exit
+cd root/build/
+make -j 2
+cd root/build/
+exit
+cd root/build/
+cmake ../
+make -j 3
+cmake ../
+make -j 3
+./pypresso 
+./pypresso 
+exit
