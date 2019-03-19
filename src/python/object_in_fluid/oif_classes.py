@@ -65,6 +65,9 @@ class PartPoint(object):
     def get_pos(self):
         return self.part.pos
 
+    def get_part_id(self):
+        return self.part_id
+
     def get_vel(self):
         return self.part.v
 
@@ -896,7 +899,7 @@ class OifCell(object):
     """
 
     def __init__(self, cell_type=None, origin=None, particle_type=None,
-                 particle_mass=1.0, rotate=None, exclusion_neighbours = True):
+                 particle_mass=1.0, rotate=None, exclusion_neighbours = True, rotation_ids = []):
         if (cell_type is None) or (not isinstance(cell_type, OifCellType)):
             raise Exception(
                 "OifCell: No cellType provided or wrong type. Quitting.")
@@ -912,7 +915,7 @@ class OifCell(object):
             raise TypeError("Rotate must be list of three floats.")
         if not isinstance(exclusion_neighbours, bool):
             raise Exception("OifCell: exclusion_neighbours must be bool.")
-
+        
         self.cell_type = cell_type
         self.cell_type.system.max_oif_objects = self.cell_type.system.max_oif_objects + 1
         self.mesh = cell_type.mesh.copy(
@@ -921,6 +924,18 @@ class OifCell(object):
         self.particle_type = particle_type
         self.origin = origin
         self.rotate = rotate
+        self.rot_ids = []
+        rot_ids_ok = 1
+        for it in rotation_ids:
+            if isinstance(it, int) != True:
+                rot_ids_ok = 0
+            it = int(it)
+            if it < 0 or it >= len(self.mesh.points):
+                rot_ids_ok = 0
+        if rot_ids_ok == 0:
+            raise Exception("OifCell: rotation_ids must be a tuple of integer valued ids between 0 and the number of mesh points.")
+        self.set_rot_ids(rotation_ids)
+
         for inter in self.cell_type.local_force_interactions:
             esp_inter = inter[0]
             points = inter[1]
@@ -965,7 +980,49 @@ class OifCell(object):
         if exclusion_neighbours is True:
             for edge in self.mesh.edges:
                 self.cell_type.system.part[edge.A.part_id].add_exclusion(edge.B.part_id)
-    
+        
+
+    def set_rot_ids(self,ids=[]):
+        if ids == []:
+            # searching for extremal points IDs
+            x_min = large_number
+            x_max = -large_number
+            y_min = large_number
+            y_max = -large_number
+            z_min = large_number
+            z_max = -large_number
+            for tmp_part_point in self.cell_type.mesh.points:
+                coords = tmp_part_point.get_pos()
+                if coords[0] < x_min:
+                    x_min = coords[0]
+                    self.rot_ids[0] = tmp_part_point.get_id()
+                if coords[0] > x_max:
+                    x_max = coords[0]
+                    self.rot_ids[1] = tmp_part_point.get_id()
+                if coords[1] < y_min:
+                    y_min = coords[1]
+                    self.rot_ids[2] = tmp_part_point.get_id()
+                if coords[1] > y_max:
+                    y_max = coords[1]
+                    self.rot_ids[3] = tmp_part_point.get_id()
+                if coords[2] < z_min:
+                    z_min = coords[2]
+                    self.rot_ids[4] = tmp_part_point.get_id()
+                if coords[2] > z_max:
+                    z_max = coords[2]
+                    self.rot_ids[5] = tmp_part_point.get_id()
+        else:
+            ok = 1
+            for it in ids:
+                if isinstance(it, int) != True:
+                    ok = 0
+                it = int(it)
+                if it < 0 or it >= len(self.mesh.points):
+                    ok = 0
+            if ok == 0:
+                raise Exception("OifCell: set_rot_ids: rotation_ids must be a tuple of integer valued ids between 0 and the number of mesh points.")
+            self.rot_ids = ids
+            
     def get_origin(self):
         center = np.array([0.0, 0.0, 0.0])
         for p in self.mesh.points:
