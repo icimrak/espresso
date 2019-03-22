@@ -96,6 +96,23 @@ def area_triangle(a, b, c):
     area = 0.5 * norm(n)
     return area
 
+def angle_btw_vectors(a,b):
+    """
+    Returns the angle btw two vectors
+    
+
+    Parameters
+    ----------
+    a : first vector, list of :obj:`float`
+          vector with 3 components, point a
+    b : second vector, list of :obj:`float`
+          vector with 3 components, point b
+
+    """
+    cosa = a[0]*b[0] + a[1]*b[1] + a[2]*b[2] 
+    cosa = cosa/np.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2])/np.sqrt(b[0]*b[0] + b[1]*b[1] + b[2]*b[2])
+    alpha = np.arccos(cosa)        
+    return alpha
 
 def angle_btw_triangles(P1, P2, P3, P4):
     """
