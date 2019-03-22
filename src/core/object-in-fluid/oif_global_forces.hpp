@@ -27,6 +27,19 @@
 #include "utils.hpp"
 #include "particle_data.hpp"
 #include "bonded_interactions/bonded_interaction_data.hpp"
+#include "bonded_interactions/bonded_interaction_data.hpp"
+#include "cells.hpp"
+#include "communication.hpp"
+#include "errorhandling.hpp"
+#include "grid.hpp"
+#include "grid_based_algorithms/lb_interface.hpp"
+#include "particle_data.hpp"
+#include "grid_based_algorithms/lb.hpp"
+
+#include "utils/math/triangle_functions.hpp"
+using Utils::angle_btw_triangles;
+using Utils::area_triangle;
+using Utils::get_n_triangle;
 
 /** set parameters for the OIF_GLOBAL_FORCES potential.
  */

@@ -24,18 +24,6 @@
  */
 
 #include "oif_global_forces.hpp"
-#include "bonded_interactions/bonded_interaction_data.hpp"
-#include "cells.hpp"
-#include "communication.hpp"
-#include "errorhandling.hpp"
-#include "grid.hpp"
-#include "grid_based_algorithms/lb_interface.hpp"
-#include "particle_data.hpp"
-
-#include "utils/math/triangle_functions.hpp"
-using Utils::angle_btw_triangles;
-using Utils::area_triangle;
-using Utils::get_n_triangle;
 
 /** set parameters for the OIF_GLOBAL_FORCES potential.
  */
@@ -74,21 +62,25 @@ int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g,
 void flag_lbnodes_variable_visc() {
     //there is initial algorithm
 
-
   /** initializes the variable viscosity fields, all the fields will be constant with viscosity values given by lbfluid. */
- /* for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
+  for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
     for (int y = 0; y < lblattice.halo_grid[1]; ++y) {
       for (int z = 0; z < lblattice.halo_grid[2]; ++z) {
         int index = get_linear_index(x, y, z, lblattice.halo_grid);
-          lbfields[index].var_visc_gamma_shear = 1. - 2. / (6. * lbpar.viscosity * lbpar.tau /
-                                                                (lbpar.agrid * lbpar.agrid) +
-                                                            1.);
-          //lbfields[index].var_visc_gamma_bulk = 1. - 2. / (9. * lbpar.bulk_viscosity * lbpar.tau /
-          //                                                      (lbpar.agrid * lbpar.agrid) +
-          //                                                  1.);
+
+
+          lbfields[index].var_visc_gamma_shear = 1. - 2. /
+                  (6. * lbpar.viscosity * lbpar.tau /(lbpar.agrid * lbpar.agrid) + 1.);
+
+          printf("Updated LB\n");
+
+
+         //Currently not defined variable
+         // lbfields[index].var_visc_gamma_bulk = 1. - 2. /
+         //         (9. * lbpar.bulk_viscosity * lbpar.tau / (lbpar.agrid * lbpar.agrid) + 1.);
       }
     }
-  }*/
+  }
   
   // NEXT, we continue with reflagging over all cells. TODO.
 }
@@ -97,6 +89,7 @@ void flag_lbnodes_variable_visc() {
 
 void reflag_lbnodes_variable_visc(){
     //there is updating algorithm
+
 }
 
 void print_lbnodes_variable_visc(){
