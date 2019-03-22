@@ -235,9 +235,6 @@ void integrate_vv(int n_steps, int reuse_forces) {
         //Calling Initial algorithm of LB_VARIABLE_VISCOSITY
         flag_lbnodes_variable_visc();
     }
-
-    //Helper print method of LB_VARIABLE_VISCOSITY state, which is runned after every exacution of LB_VARIABLE_VISCOSITY algorithm
-    print_lbnodes_variable_visc();
 #endif
 
 

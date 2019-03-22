@@ -60,46 +60,18 @@ int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g,
 
 #ifdef LB_VARIABLE_VISCOSITY
 void flag_lbnodes_variable_visc() {
-    //there is initial algorithm
-
-  /** initializes the variable viscosity fields, all the fields will be constant with viscosity values given by lbfluid. */
-  for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
-    for (int y = 0; y < lblattice.halo_grid[1]; ++y) {
-      for (int z = 0; z < lblattice.halo_grid[2]; ++z) {
-        int index = get_linear_index(x, y, z, lblattice.halo_grid);
-
-
-          lbfields[index].var_visc_gamma_shear = 1. - 2. /
-                  (6. * lbpar.viscosity * lbpar.tau /(lbpar.agrid * lbpar.agrid) + 1.);
-
-          printf("Updated LB\n");
-
-
-         //Currently not defined variable
-         // lbfields[index].var_visc_gamma_bulk = 1. - 2. /
-         //         (9. * lbpar.bulk_viscosity * lbpar.tau / (lbpar.agrid * lbpar.agrid) + 1.);
-      }
-    }
-  }
-  
-  // NEXT, we continue with reflagging over all cells. TODO.
+    var_visc_initial_algorithm();
 }
 
 
 
 void reflag_lbnodes_variable_visc(){
-    //there is updating algorithm
-
-}
-
-void print_lbnodes_variable_visc(){
-  //printing all LB nodes with viscosity
+    var_visc_update_algorithm();
 }
 #endif
 
 
-void calc_oif_global(double *area_volume,
-                     int molType) { // first-fold-then-the-same approach
+void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-same approach
   double partArea = 0.0;
   double part_area_volume[2]; // added
 
@@ -130,6 +102,9 @@ void calc_oif_global(double *area_volume,
         auto const VOL_dn = VOL_norm.norm();
         auto const VOL_hz = 1.0 / 3.0 * (p11[2] + p22[2] + p33[2]);
         VOL_partVol += VOL_A * -1 * VOL_norm[2] / VOL_dn * VOL_hz;
+
+        printf("calc_oif_global\n");
+
     }
   }
 
@@ -139,8 +114,7 @@ void calc_oif_global(double *area_volume,
   MPI_Allreduce(part_area_volume, area_volume, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 }
 
-void add_oif_global_forces(double const *area_volume,
-                           int molType) { // first-fold-then-the-same approach
+void add_oif_global_forces(double *area_volume, int molType) { // first-fold-then-the-same approach
   double area = area_volume[0];
   double VOL_volume = area_volume[1];
 
@@ -179,6 +153,7 @@ void add_oif_global_forces(double const *area_volume,
       p1->f.f += fac * m1;
       p2->f.f += fac * m2;
       p3->f.f += fac * m3;
+      printf("add_oif_global_forces\n");
     }
   }
 }

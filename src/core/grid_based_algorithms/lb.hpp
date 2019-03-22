@@ -95,6 +95,11 @@ template <size_t N_vel = 19> struct LB_Model {
   std::array<std::array<int, N_vel>, N_vel> e_ki_transposed;
 };
 
+
+#ifdef LB_VARIABLE_VISCOSITY
+enum Flag {outer, boundary_flag, input, inner, output, input_output, not_defined};
+#endif
+
 /** Data structure for fluid on a local lattice site */
 struct LB_FluidNode {
 #ifdef LB_BOUNDARIES
@@ -106,6 +111,7 @@ struct LB_FluidNode {
   /** local force density */
   Vector3d force_density;
 #ifdef LB_VARIABLE_VISCOSITY
+  Flag flag;
   double var_visc_gamma_shear;
   // other variables are ready in case bulk or TRT is used
   //double var_visc_gamma_bulk;

@@ -37,6 +37,8 @@
 #include "grid_based_algorithms/lb.hpp"
 
 #include "utils/math/triangle_functions.hpp"
+#include "lbnodes_variable_viscosity.hpp"
+
 using Utils::angle_btw_triangles;
 using Utils::area_triangle;
 using Utils::get_n_triangle;
@@ -46,7 +48,7 @@ using Utils::get_n_triangle;
 int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g,
                                  double V0, double kv, double inner_fluid_visc);
 void calc_oif_global(double *area_volume, int molType);
-void add_oif_global_forces(double const *area_volume, int molType);
+void add_oif_global_forces(double *area_volume, int molType);
 
 bool calc_vectors_of_triangles(Particle &p, Vector3d &p11, Vector3d &p22, Vector3d &p33, Particle* p1, Particle* p2,
         Particle* p3, int molType, Bonded_ia_parameters* iaparams, int test);
@@ -55,7 +57,6 @@ bool calc_vectors_of_triangles(Particle &p, Vector3d &p11, Vector3d &p22, Vector
 #ifdef LB_VARIABLE_VISCOSITY
 void flag_lbnodes_variable_visc();
 void reflag_lbnodes_variable_visc();
-void print_lbnodes_variable_visc();
 #endif
 
 /************************************************************/

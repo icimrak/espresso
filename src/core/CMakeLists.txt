@@ -130,7 +130,7 @@ set(EspressoCore_SRC
   virtual_sites/virtual_sites_com.cpp
   virtual_sites/VirtualSitesInertialessTracers.cpp
   virtual_sites/VirtualSitesRelative.cpp
-  )
+        object-in-fluid/lbnodes_variable_viscosity.cpp object-in-fluid/lbnodes_variable_viscosity.hpp)
 
 if(CUDA)
   set(EspressoCuda_SRC
