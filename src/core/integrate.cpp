@@ -45,7 +45,6 @@
 #include "minimize_energy.hpp"
 #include "nonbonded_interactions/nonbonded_interaction_data.hpp"
 #include "npt.hpp"
-#include "object-in-fluid/oif_global_forces.hpp"
 #include "particle_data.hpp"
 #include "pressure.hpp"
 #include "rattle.hpp"
@@ -98,10 +97,16 @@ double db_max_force = 0.0, db_max_vel = 0.0;
 int db_maxf_id = 0, db_maxv_id = 0;
 #endif
 
+
 bool set_py_interrupt = false;
 namespace {
 volatile static std::sig_atomic_t ctrl_C = 0;
 }
+
+#ifdef LB_VARIABLE_VISCOSITY
+LBodes_variable_viscosity lbodes_variable_visc_instance{};
+#endif
+
 
 /** \name Private Functions */
 /************************************************************/
@@ -233,7 +238,7 @@ void integrate_vv(int n_steps, int reuse_forces) {
         reflag_lbnodes_variable_visc();
     } else {
         //Calling Initial algorithm of LB_VARIABLE_VISCOSITY
-        flag_lbnodes_variable_visc();
+        flag_lbnodes_variable_visc(&lbodes_variable_visc_instance);
     }
 #endif
 

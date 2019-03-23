@@ -24,6 +24,7 @@
  */
 
 #include "oif_global_forces.hpp"
+#include "../../../build/myconfig.hpp"
 
 /** set parameters for the OIF_GLOBAL_FORCES potential.
  */
@@ -59,14 +60,17 @@ int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g,
  */
 
 #ifdef LB_VARIABLE_VISCOSITY
-void flag_lbnodes_variable_visc() {
-    var_visc_initial_algorithm();
+LBodes_variable_viscosity *lbodes_variable_viscosity{nullptr};
+
+void flag_lbnodes_variable_visc(LBodes_variable_viscosity *lbodes_variable_visc) {
+  lbodes_variable_viscosity = lbodes_variable_visc;
+  lbodes_variable_viscosity->var_visc_initial_algorithm();
 }
 
 
 
 void reflag_lbnodes_variable_visc(){
-    var_visc_update_algorithm();
+  lbodes_variable_viscosity->var_visc_update_algorithm();
 }
 #endif
 
@@ -78,18 +82,13 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
   // z volume
   double VOL_partVol = 0.;
 
-  /* loop over particles */
-  Particle *p1, *p2, *p3;
-  Vector3d p11, p22, p33;
-  int img[3];
-  double AA[3], BB[3];
-  Bonded_ia_parameters *iaparams;
-  int type_num, n_partners, id;
-  BondedInteraction type;
-
   int test = 0;
 
   for (auto &p : local_cells.particles()) {
+    #ifdef LB_VARIABLE_VISCOSITY
+      lbodes_variable_viscosity->particle_from_main_loop(p);
+      lbodes_variable_viscosity->looping_over_particles = true;
+    #endif
     Vector3d p11, p22, p33;
     Particle *p1{nullptr}, *p2{nullptr}, *p3{nullptr};
     Bonded_ia_parameters *iaparams{nullptr};
@@ -112,6 +111,9 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
   part_area_volume[1] = VOL_partVol;
 
   MPI_Allreduce(part_area_volume, area_volume, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  #ifdef LB_VARIABLE_VISCOSITY
+    lbodes_variable_viscosity->looping_over_particles = false;
+  #endif
 }
 
 void add_oif_global_forces(double *area_volume, int molType) { // first-fold-then-the-same approach
@@ -122,6 +124,10 @@ void add_oif_global_forces(double *area_volume, int molType) { // first-fold-the
 
 
   for (auto &p : local_cells.particles()) {
+    #ifdef LB_VARIABLE_VISCOSITY
+      lbodes_variable_viscosity->particle_from_main_loop(p);
+      lbodes_variable_viscosity->looping_over_particles = true;
+    #endif
     Vector3d p11, p22, p33;
     Particle *p1{nullptr}, *p2{nullptr}, *p3{nullptr};
     Bonded_ia_parameters* iaparams{nullptr};
@@ -156,6 +162,9 @@ void add_oif_global_forces(double *area_volume, int molType) { // first-fold-the
       printf("add_oif_global_forces\n");
     }
   }
+  #ifdef LB_VARIABLE_VISCOSITY
+    lbodes_variable_viscosity->looping_over_particles = false;
+  #endif
 }
 
 bool calc_vectors_of_triangles(Particle &p, Vector3d &p11, Vector3d &p22, Vector3d &p33, Particle* p1, Particle* p2,
@@ -169,8 +178,7 @@ bool calc_vectors_of_triangles(Particle &p, Vector3d &p11, Vector3d &p22, Vector
     auto const type = iaparams->type;
     auto const n_partners = iaparams->num;
     auto const id = p1->p.mol_id;
-    if (type == BONDED_IA_OIF_GLOBAL_FORCES &&
-        id == molType) { // BONDED_IA_OIF_GLOBAL_FORCES with correct molType
+    if (type == BONDED_IA_OIF_GLOBAL_FORCES && id == molType) { // BONDED_IA_OIF_GLOBAL_FORCES with correct molType
       test++;
       // fetch particle 2
       p2 = local_particles[p1->bl.e[j++]];

@@ -27,7 +27,6 @@
 #include "utils.hpp"
 #include "particle_data.hpp"
 #include "bonded_interactions/bonded_interaction_data.hpp"
-#include "bonded_interactions/bonded_interaction_data.hpp"
 #include "cells.hpp"
 #include "communication.hpp"
 #include "errorhandling.hpp"
@@ -55,7 +54,10 @@ bool calc_vectors_of_triangles(Particle &p, Vector3d &p11, Vector3d &p22, Vector
 
 
 #ifdef LB_VARIABLE_VISCOSITY
-void flag_lbnodes_variable_visc();
+extern LBodes_variable_viscosity *lbodes_variable_viscosity;
+
+
+void flag_lbnodes_variable_visc(LBodes_variable_viscosity *lbodes_variable_visc);
 void reflag_lbnodes_variable_visc();
 #endif
 
