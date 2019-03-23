@@ -15,12 +15,15 @@
 #include "cells.hpp"
 #include "grid.hpp"
 #include "utils/math/triangle_functions.hpp"
+#include <vector>
+#include "Triangle.h"
 using Utils::get_n_triangle;
 
 class LBodes_variable_viscosity{
 private:
     void init_data_structure();
-    Vector3d A, B, C;
+    Vector3d A_unfolded, B_unfolded, C_unfolded;
+    Vector3d A_folded, B_folded, C_folded;
     Particle *p1{nullptr}, *p2{nullptr}, *p3{nullptr};
     Bonded_ia_parameters *iaparams{nullptr};
 
@@ -29,6 +32,9 @@ private:
     double min_Pz{DBL_MAX};
     double max_Pz{DBL_MIN};
     void reset_algorithm_parameters();
+    void check_min_max_x_y(double &min_y, double &max_y, double &min_z, double &max_z, Triangle triangle);
+    void findingObjectBoundary(Triangle triangle, int pY, Vector3d normal_vector, double d,
+                               std::vector<Vector3d > *boundaryPoints);
 
 public:
     bool making_initial_algorithm{false};
