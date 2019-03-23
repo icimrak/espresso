@@ -55,10 +55,13 @@ bool calc_vectors_of_triangles(Particle &p, Vector3d &p11, Vector3d &p22, Vector
 
 #ifdef LB_VARIABLE_VISCOSITY
 extern LBodes_variable_viscosity *lbodes_variable_viscosity;
+extern bool flagging_lbnodes_var_visc;
+extern bool reflagging_lbnodes_var_visc;
 
 
 void flag_lbnodes_variable_visc(LBodes_variable_viscosity *lbodes_variable_visc);
 void reflag_lbnodes_variable_visc();
+void update_flags_variable_visc();
 #endif
 
 /************************************************************/

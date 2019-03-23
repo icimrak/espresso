@@ -17,65 +17,88 @@ void LBodes_variable_viscosity::init_data_structure() {
 }
 
 void LBodes_variable_viscosity::particle_from_main_loop(Particle &p){
-    Vector3d p11, p22, p33;
-    Particle *p1{nullptr}, *p2{nullptr}, *p3{nullptr};
-    Bonded_ia_parameters *iaparams{nullptr};
+    if (making_initial_algorithm || making_update_algorithm) {
+        int j = 0;
+        p1 = &p;
+
+        // bond type
+        auto const type_num = p1->bl.e[j++];
+        iaparams = &bonded_ia_params[type_num];
+        auto const type = iaparams->type;
+        auto const n_partners = iaparams->num;
+        auto const id = p1->p.mol_id;
+
+        // fetch particle 2
+        p2 = local_particles[p1->bl.e[j++]];
+        if (!p2) {
+            runtimeErrorMsg() << "add area: bond broken between particles "
+                              << p1->p.identity << " and " << p1->bl.e[j - 1]
+                              << " (particles not stored on the same node - "
+                                 "oif_globalforce2); n "
+                              << p1->bl.n << " max " << p1->bl.max;
+            return;
+        }
+        // fetch particle 3
+        // if(n_partners>2){
+        p3 = local_particles[p1->bl.e[j++]];
+        if (!p3) {
+            runtimeErrorMsg()
+                    << "add area: bond broken between particles " << p1->p.identity
+                    << ", " << p1->bl.e[j - 2] << " and " << p1->bl.e[j - 1]
+                    << " (particles not stored on the same node); n " << p1->bl.n
+                    << " max " << p1->bl.max;
+            return;
+        }
 
 
-    int j = 0;
-    p1 = &p;
+        //budem potrebovat aj folded aj unfolded
+        A = unfolded_position(*p1);
+        B = A + get_mi_vector(p2->r.p, A);
+        C = A + get_mi_vector(p3->r.p, A);
 
-    // bond type
-    auto const type_num = p1->bl.e[j++];
-    iaparams = &bonded_ia_params[type_num];
-    auto const type = iaparams->type;
-    auto const n_partners = iaparams->num;
-    auto const id = p1->p.mol_id;
+        std::cout << "A " << A.m_storage.m_data[0] << "; " << A.m_storage.m_data[1] << "; "
+                  << A.m_storage.m_data[2] << std::endl;
 
-    // fetch particle 2
-    p2 = local_particles[p1->bl.e[j++]];
-    if (!p2) {
-        runtimeErrorMsg() << "add area: bond broken between particles "
-                          << p1->p.identity << " and " << p1->bl.e[j - 1]
-                          << " (particles not stored on the same node - "
-                             "oif_globalforce2); n "
-                          << p1->bl.n << " max " << p1->bl.max;
-        return;
+        if (making_update_algorithm){
+            //tu zas inak zareagujem na update algorithm
+
+        } else if (making_initial_algorithm){
+            //tu nejako zareagujem ak robim initial algorithm
+
+            //normalovy vektor
+            const Vector3d normal_vector = get_n_triangle(A, B, C).normalize();
+            //parameter d z rovnice roviny
+            double d = -(normal_vector[0] * A[0] + normal_vector[1] * A[1] + normal_vector[2] * A[2]);
+            int minY = ceil(std::min({A[1],B[1],C[1]}));
+            int maxY = floor(std::max({A[1], B[1], C[1]}));
+        }
+
+
+
+
+
+
+
+
     }
-    // fetch particle 3
-    // if(n_partners>2){
-    p3 = local_particles[p1->bl.e[j++]];
-    if (!p3) {
-        runtimeErrorMsg()
-                << "add area: bond broken between particles " << p1->p.identity
-                << ", " << p1->bl.e[j - 2] << " and " << p1->bl.e[j - 1]
-                << " (particles not stored on the same node); n " << p1->bl.n
-                << " max " << p1->bl.max;
-        return;
-    }
-
-    p11 = unfolded_position(*p1);
-    p22 = p11 + get_mi_vector(p2->r.p, p11);
-    p33 = p11 + get_mi_vector(p3->r.p, p11);
-
-    std::cout<< "p11 "<<p11.m_storage.m_data[0]<<"; " << p11.m_storage.m_data[1]<< "; " << p11.m_storage.m_data[2] << std::endl;
 }
 
 
-void LBodes_variable_viscosity::var_visc_initial_algorithm() {
-    this->making_initial_algorithm = true;
+void LBodes_variable_viscosity::reset_algorithm_parameters(){
+    min_Py = DBL_MAX;
+    max_Py = DBL_MIN;
+    min_Pz = DBL_MAX;
+    max_Pz = DBL_MIN;
+}
 
+void LBodes_variable_viscosity::initial_algorithm() {
     init_data_structure();
-    double min_Py{DBL_MAX};
-    double max_Py{DBL_MIN};
-    double min_Pz{DBL_MAX};
-    double max_Pz{DBL_MIN};
+    reset_algorithm_parameters();
 
 
 
 
-
-/** initializes the variable viscosity fields, all the fields will be constant with viscosity values given by lbfluid. */
+// initializes the variable viscosity fields, all the fields will be constant with viscosity values given by lbfluid.
     for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
         for (int y = 0; y < lblattice.halo_grid[1]; ++y) {
             for (int z = 0; z < lblattice.halo_grid[2]; ++z) {
@@ -101,11 +124,9 @@ void LBodes_variable_viscosity::var_visc_initial_algorithm() {
     }
     //  print_lbnodes_variable_visc();
     // NEXT, we continue with reflagging over all cells. TODO.
-
-    making_initial_algorithm = false;
 }
 
-void LBodes_variable_viscosity::var_visc_update_algorithm() {
+void LBodes_variable_viscosity::update_algorithm() {
 
 
 

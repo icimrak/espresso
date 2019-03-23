@@ -230,7 +230,11 @@ inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3,
 // takto sa da vypocitat dlzka vektora
 //      auto const m1_length = m1.norm();
 
-// Tu treba detekovat vsetky body Q, ktore lezia v trojuholniku fp1,fp2,fp3 a maju celociselne y-ove a z-ove suradnice. Ak vies, ze Q ma suradnice (qx,qy,qz), tak este treba zistit, ci mrezovy bod (floor(qx),qy,qz) leziaci nalavo trojuholnika je vnutri bunky  a ten napravo (floor(qx) + 1,qy,qz) zase zvonku bunky, alebo je to naopak. To sa zisti podla orientacie trojuholnika. Totiz poradie bodov fp1,fp2,fp3 je dane vzdy tak, ze normalovy vector vypocitany ako vektorovy sucin fp1fp2 x fp1fp3 ukazuje smerom dovnutra bunky. Normalovy vector vies ziskat ako
+// Tu treba detekovat vsetky body Q, ktore lezia v trojuholniku fp1,fp2,fp3 a maju celociselne y-ove a z-ove suradnice.
+// Ak vies, ze Q ma suradnice (qx,qy,qz), tak este treba zistit, ci mrezovy bod (floor(qx),qy,qz) leziaci nalavo
+// trojuholnika je vnutri bunky  a ten napravo (floor(qx) + 1,qy,qz) zase zvonku bunky, alebo je to naopak.
+// To sa zisti podla orientacie trojuholnika. Totiz poradie bodov fp1,fp2,fp3 je dane vzdy tak, ze normalovy vector
+// vypocitany ako vektorovy sucin fp1fp2 x fp1fp3 ukazuje smerom dovnutra bunky. Normalovy vector vies ziskat ako
 //get_n_triangle(fp1, fp2, fp3).normalize();
 // Postup, ako sa zisti, ci si vo vnutri alebo vonku ti posielam mailom so subjektom "vonku ci vo vnutri"
 

@@ -14,21 +14,31 @@
 #include "bonded_interactions/bonded_interaction_data.hpp"
 #include "cells.hpp"
 #include "grid.hpp"
+#include "utils/math/triangle_functions.hpp"
+using Utils::get_n_triangle;
 
 class LBodes_variable_viscosity{
 private:
     void init_data_structure();
+    Vector3d A, B, C;
+    Particle *p1{nullptr}, *p2{nullptr}, *p3{nullptr};
+    Bonded_ia_parameters *iaparams{nullptr};
+
+    double min_Py{DBL_MAX};
+    double max_Py{DBL_MIN};
+    double min_Pz{DBL_MAX};
+    double max_Pz{DBL_MIN};
+    void reset_algorithm_parameters();
 
 public:
-    bool looping_over_particles{false};
-
     bool making_initial_algorithm{false};
+    bool making_update_algorithm{false};
 
     void particle_from_main_loop(Particle &p);
 
-    void var_visc_initial_algorithm();
+    void initial_algorithm();
 
-    void var_visc_update_algorithm();
+    void update_algorithm();
 
     void print_lbnodes_variable_visc();
 
