@@ -35,6 +35,7 @@ private:
     void check_min_max_x_y(double &min_y, double &max_y, double &min_z, double &max_z, Triangle triangle);
     void findingObjectBoundary(Triangle triangle, int pY, Vector3d normal_vector, double d,
                                std::vector<Vector3d > *boundaryPoints);
+    void markingObjectBoundary(std::vector<Vector3d> &boundary_points, Vector3d normal_vector);
 
 public:
     bool making_initial_algorithm{false};

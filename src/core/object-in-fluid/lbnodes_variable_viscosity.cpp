@@ -103,16 +103,16 @@ void LBodes_variable_viscosity::findingObjectBoundary(Triangle triangle, int pY,
     //potrebujem zistit suradnice P1 a P2
     std::vector<Vector3d> P_points;
 
-    double t_AB = (pY - triangle.getA().y) / (triangle.getB().y - triangle.getA().y);
-    if (triangle.getB().y - triangle.getA().y == 0.000000 && (t_AB == 0 || t_AB == 1)) {
+    double t_AB = (pY - triangle.getA()[1]) / (triangle.getB()[1] - triangle.getA()[1]);
+    if (triangle.getB()[1] - triangle.getA()[1] == 0.000000 && (t_AB == 0 || t_AB == 1)) {
         count_NAN++;
     }
-    double t_BC = (pY - triangle.getB().y) / (triangle.getC().y - triangle.getB().y);
-    if (triangle.getC().y - triangle.getB().y == 0.000000 && (t_BC == 0 || t_BC == 1)) {
+    double t_BC = (pY - triangle.getB()[1]) / (triangle.getC()[1] - triangle.getB()[1]);
+    if (triangle.getC()[1] - triangle.getB()[1] == 0.000000 && (t_BC == 0 || t_BC == 1)) {
         count_NAN++;
     }
-    double t_AC = (pY - triangle.getA().y) / (triangle.getC().y - triangle.getA().y);
-    if (triangle.getC().y - triangle.getA().y == 0.000000 && (t_AC == 0 || t_AC == 1)) {
+    double t_AC = (pY - triangle.getA()[1]) / (triangle.getC()[1] - triangle.getA()[1]);
+    if (triangle.getC()[1] - triangle.getA()[1] == 0.000000 && (t_AC == 0 || t_AC == 1)) {
         count_NAN++;
     }
 
@@ -150,48 +150,48 @@ void LBodes_variable_viscosity::findingObjectBoundary(Triangle triangle, int pY,
 
     //ak je priesecnik cez nejaku hranu
     if (t_AB >= 0 && t_AB <= 1) {
-        double pZ = triangle.getA().z + t_AB * (triangle.getB().z - triangle.getA().z);
-        double pX = triangle.getA().x_folded + t_AB * (triangle.getB().x_folded - triangle.getA().x_folded);
+        double pZ = triangle.getA()[2] + t_AB * (triangle.getB()[2] - triangle.getA()[2]);
+        double pX = triangle.getA()[0] + t_AB * (triangle.getB()[0] - triangle.getA()[0]);
         if (t_AB == 1) {
             cuts_B = true;
         } else if (t_AB == 0) {
             cuts_A = true;
         }
-        P_points.push_back(Position{pX, (double) pY, pZ});
+        P_points.push_back(Vector3d{pX, (double) pY, pZ});
     }
     if (t_BC >= 0 && t_BC <= 1) {
-        double pZ = triangle.getB().z + t_BC * (triangle.getC().z - triangle.getB().z);
-        double pX = triangle.getB().x_folded + t_BC * (triangle.getC().x_folded - triangle.getB().x_folded);
+        double pZ = triangle.getB()[2] + t_BC * (triangle.getC()[2] - triangle.getB()[2]);
+        double pX = triangle.getB()[0] + t_BC * (triangle.getC()[0] - triangle.getB()[0]);
         if (t_BC == 1) {
             cuts_C = true;
-            P_points.push_back(Position{pX, (double) pY, pZ});
+            P_points.push_back(Vector3d{pX, (double) pY, pZ});
             goto Intersection_of_AC;
         } else if (t_BC == 0 && !cuts_B) {
             cuts_B = true;
-            P_points.push_back(Position{pX, (double) pY, pZ});
+            P_points.push_back(Vector3d{pX, (double) pY, pZ});
             goto Intersection_of_AC;
         }
-        P_points.push_back(Position{pX, (double) pY, pZ});
+        P_points.push_back(Vector3d{pX, (double) pY, pZ});
     }
 
     Intersection_of_AC:
     if (t_AC >= 0 && t_AC <= 1) {
-        double pZ = triangle.getA().z + t_AC * (triangle.getC().z - triangle.getA().z);
-        double pX = triangle.getA().x_folded + t_AC * (triangle.getC().x_folded - triangle.getA().x_folded);
+        double pZ = triangle.getA()[2] + t_AC * (triangle.getC()[2] - triangle.getA()[2]);
+        double pX = triangle.getA()[0] + t_AC * (triangle.getC()[0] - triangle.getA()[0]);
         if (t_AC == 1) {
             if (!cuts_C) {
                 cuts_C = true;
-                P_points.push_back(Position{pX, (double) pY, pZ});
+                P_points.push_back(Vector3d{pX, (double) pY, pZ});
             }
             goto Process_Boundary_points;
         } else if (t_AC == 0) {
             if (!cuts_A) {
                 cuts_A = true;
-                P_points.push_back(Position{pX, (double) pY, pZ});
+                P_points.push_back(Vector3d{pX, (double) pY, pZ});
             }
             goto Process_Boundary_points;
         }
-        P_points.push_back(Position{pX, (double) pY, pZ});
+        P_points.push_back(Vector3d{pX, (double) pY, pZ});
     }
 
     //Rounding Z-coordinate and compute X-coordinate
@@ -201,35 +201,35 @@ void LBodes_variable_viscosity::findingObjectBoundary(Triangle triangle, int pY,
     switch (P_points.size()) {
         case 2:
             //priesecnikom su 2 body
-            if (P_points.at(0).z > P_points.at(1).z) {
-                z_max = P_points.at(0).z;
-                z_min = P_points.at(1).z;
+            if (P_points.at(0)[2] > P_points.at(1)[2]) {
+                z_max = P_points.at(0)[2];
+                z_min = P_points.at(1)[2];
             } else {
-                z_min = P_points.at(0).z;
-                z_max = P_points.at(1).z;
+                z_min = P_points.at(0)[2];
+                z_max = P_points.at(1)[2];
             }
             //ak existuje celocislene Z
             if (floor(z_max) - ceil(z_min) >= 0) {
                 int z_hlp = ceil(z_min);
                 while (z_hlp <= floor(z_max)) {
                     //moze tu byt delenie nulou!!!!!
-                    double x = -((normal_vector.y * pY) + (normal_vector.z * z_hlp) + d) / normal_vector.x_folded;
-                    boundaryPoints->push_back(Position{x, (double) pY, (double) z_hlp});
+                    double x = -((normal_vector[1] * pY) + (normal_vector[2] * z_hlp) + d) / normal_vector[0];
+                    boundaryPoints->push_back(Vector3d{x, (double) pY, (double) z_hlp});
                     z_hlp++;
                 }
             }
             break;
         case 1:
             //priesecnikom je len jeden bod
-            z_max = P_points.at(0).z;
-            z_min = P_points.at(0).z;
+            z_max = P_points.at(0)[2];
+            z_min = P_points.at(0)[2];
             //ak existuje celocislene Z
             if (floor(z_max) - ceil(z_min) >= 0) {
                 int z_hlp = ceil(z_min);
                 while (z_hlp <= floor(z_max)) {
                     //moze tu byt delenie nulou!!!!!
-                    double x = -((normal_vector.y * pY) + (normal_vector.z * z_hlp) + d) / normal_vector.x_folded;
-                    boundaryPoints->push_back(Position{x, (double) pY, (double) z_hlp});
+                    double x = -((normal_vector[1] * pY) + (normal_vector[2] * z_hlp) + d) / normal_vector[0];
+                    boundaryPoints->push_back(Vector3d{x, (double) pY, (double) z_hlp});
                     z_hlp++;
                 }
             }
@@ -244,8 +244,8 @@ void LBodes_variable_viscosity::findingObjectBoundary(Triangle triangle, int pY,
 
             //usporiadam si tieto body podľa suradnic, ktore prave potrebujem
             /*  sort(P_points.begin(), P_points.end(), compareByPosition_Z);
-              double z_max = P_points.at(2).z;
-              double z_min = P_points.at(0).z;
+              double z_max = P_points.at(2)[2];
+              double z_min = P_points.at(0)[2];
 
               //ak existuje celocislene Z
               if (floor(z_max) - ceil(z_min) >= 0) {
@@ -262,7 +262,7 @@ void LBodes_variable_viscosity::findingObjectBoundary(Triangle triangle, int pY,
 
                           x_hlp++;
                       }
-                      Z_points.push_back(Position{x_folded, (double) pY, (double) z_hlp});
+                      Z_points.push_back(Vector3d{x_folded, (double) pY, (double) z_hlp});
                       z_hlp++;
                   }
               }*/
@@ -272,6 +272,111 @@ void LBodes_variable_viscosity::findingObjectBoundary(Triangle triangle, int pY,
             break;
     }
 }
+
+void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &boundary_points, Vector3d normal_vector) {
+    for (size_t k = 0; k < boundary_points.size(); ++k) {
+        Vector3d Z_point = boundary_points.at(k);
+        int x_low = floor(Z_point[0]);
+        int x_high = ceil(Z_point[0]);
+
+        if (x_high == this->size_x) {
+            x_high = 0;
+        }
+
+        Vector3d low_vector{x_low - Z_point[0], 0, 0};
+        Vector3d high_vector{x_high - Z_point[0], 0, 0};
+
+        double citatel_low{normal_vector[0] * low_vector[0] + normal_vector[1] * low_vector[1] +
+                           normal_vector[2] * low_vector[2]};
+
+        double citatel_high{normal_vector[0] * high_vector[0] + normal_vector[1] * high_vector[1] +
+                            normal_vector[2] * high_vector[2]};
+
+        //len bez absolutnej hodnoty citatela to funguje!!!
+        double cos_alpha_low{citatel_low /
+                             sqrt(pow(normal_vector[0], 2) + pow(normal_vector[1], 2) + pow(normal_vector[2], 2)) *
+                             sqrt(pow(low_vector[0], 2) + pow(low_vector[1], 2) + pow(low_vector[2], 2))};
+
+        //len bez absolutnej hodnoty citatela to funguje!!!
+        double cos_alpha_high{citatel_high /
+                              sqrt(pow(normal_vector[0], 2) + pow(normal_vector[1], 2) +
+                                   pow(normal_vector[2], 2)) *
+                              sqrt(pow(high_vector[0], 2) + pow(high_vector[1], 2) + pow(high_vector[2], 2))};
+        //nejaky if a potom mam suradnice pre y a z v Z_Points a x_folded su ako x_low alebo x_high a tieto body v meshi oflagujem
+
+        Vector3d Z_node_temp{Z_point};
+        Z_node_temp[0] = x_low;
+
+
+        //Do LB nodov si budem ukladat aj Z_point bod, ktory ma preflagoval, aby som vedel rozhodnut, ze ak su
+        // napr bunky strasne natesno, tak aby mi to nepreflagovali
+        Node actual_node = data_structure[(int) Z_node_temp[0]][(int) Z_node_temp[1]][(int) Z_node_temp[2]];
+
+        if (cos_alpha_low >= 0) {
+            //  cout << "Bod " << "x_folded= " << Z_node_temp[0] << ", y= " << Z_node_temp[1] << " z= " << Z_node_temp[2]
+            //       << " je vo vnutri bunky" << endl;
+            if (actual_node.flag == Flag::outer &&
+                (isnan(actual_node.Z_point[0]) || !isnan(actual_node.Z_point[0]) && (
+                        (Z_point[0] - Z_node_temp[0]) <
+                        (actual_node.Z_point[0] - Z_node_temp[0])))) {
+                //ak je X rozdiel mensi, tak bude boundary, ale ak je == tak input/output
+                //to by chcelo nejako doriesit
+                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, Flag::boundary);
+            } else if (actual_node.flag == Flag::boundary) {
+                if (actual_node.Z_point[0] != Z_point[0]) {
+                    markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
+                             Flag::input_output);
+                } else {
+                    markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
+                             Flag::boundary);
+                }
+            } else {
+                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
+                         Flag::outer);
+            }
+        } else {
+            //   cout << "Bod " << "x_folded= " << Z_node_temp[0] << ", y= " << Z_node_temp[1] << " z= " << Z_node_temp[2]
+            //       << " je von z bunky" << endl;
+            markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
+                     Flag::outer);
+        }
+        if (x_low != x_high) {
+            Z_node_temp[0] = x_high;
+            actual_node = data_structure[(int) Z_node_temp[0]][(int) Z_node_temp[1]][(int) Z_node_temp[2]];
+            if (cos_alpha_high >= 0) {
+                //    cout << "Bod " << "x_folded= " << Z_node_temp[0] << ", y= " << Z_node_temp[1] << " z= " << Z_node_temp[2]
+                //        << " je vo vnutri bunky" << endl;
+                if (actual_node.flag == Flag::outer && (isnan(actual_node.Z_point[0]) ||
+                                                        !isnan(actual_node.Z_point[0]) && (
+                                                                (Z_node_temp[0] - Z_point[0]) <
+                                                                (Z_node_temp[0] -
+                                                                 actual_node.Z_point[0])))) {
+                    //ak je X rozdiel mensi, tak bude boundary, ale ak je == tak input/output
+                    //to by chcelo nejako doriesit
+                    markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
+                             Flag::boundary);
+                } else if (actual_node.flag == Flag::boundary) {
+                    if (actual_node.Z_point[0] != Z_point[0]) {
+                        markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
+                                 Flag::input_output);
+                    } else {
+                        markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
+                                 Flag::boundary);
+                    }
+                } else {
+                    markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
+                             Flag::outer);
+                }
+            } else {
+                //    cout << "Bod " << "x_folded= " << Z_node_temp[0] << ", y= " << Z_node_temp[1] << " z= " << Z_node_temp[2]
+                //         << " je von z bunky" << endl;
+                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
+                         Flag::outer);
+            }
+        }
+    }
+}
+
 
 void LBodes_variable_viscosity::check_min_max_x_y(double &min_y, double &max_y, double &min_z, double &max_z,
                                                   Triangle triangle) {
