@@ -121,6 +121,8 @@ set(EspressoCore_SRC
   object-in-fluid/oif_global_forces.cpp
   object-in-fluid/oif_local_forces.cpp
   object-in-fluid/out_direction.cpp
+  object-in-fluid/lbnodes_variable_viscosity.cpp
+  object-in-fluid/Triangle.cpp
   observables/CylindricalLBFluxDensityProfileAtParticlePositions.cpp
   observables/CylindricalLBVelocityProfileAtParticlePositions.cpp
   observables/CylindricalLBVelocityProfile.cpp
@@ -205,5 +207,5 @@ add_subdirectory(cluster_analysis)
 
 #for preprocessors macros
 #name of definition....for example definition LB
-target_compile_definitions(EspressoCore PUBLIC EXTERNAL_FORCES MASS EXCLUSIONS LB LB_GPU LB_BOUNDARIES LB_VARIABLE_VISCOSITY
-        SOFT_SPHERE OIF_LOCAL_FORCES OIF_GLOBAL_FORCES MEMBRANE_COLLISION IMMERSED_BOUNDARY)
+#target_compile_definitions(EspressoCore PUBLIC EXTERNAL_FORCES MASS EXCLUSIONS LB LB_GPU LB_BOUNDARIES LB_VARIABLE_VISCOSITY
+#        SOFT_SPHERE OIF_LOCAL_FORCES OIF_GLOBAL_FORCES MEMBRANE_COLLISION IMMERSED_BOUNDARY)

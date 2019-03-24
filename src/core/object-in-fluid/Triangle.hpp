@@ -2,8 +2,8 @@
 // Created by Tibor Postek on 16/11/2018.
 //
 
-#ifndef CELL_INSIDE_ALG_TRIANGLE_H
-#define CELL_INSIDE_ALG_TRIANGLE_H
+#ifndef ESPRESSO_TRIANGLE_HPP
+#define ESPRESSO_TRIANGLE_HPP
 
 #include <ostream>
 #include <cmath>
@@ -24,4 +24,4 @@ public:
 };
 
 
-#endif //CELL_INSIDE_ALG_TRIANGLE_H
+#endif //ESPRESSO_TRIANGLE_HPP

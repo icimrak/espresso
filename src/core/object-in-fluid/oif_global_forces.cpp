@@ -120,6 +120,10 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
 
     MPI_Allreduce(part_area_volume, area_volume, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #ifdef LB_VARIABLE_VISCOSITY
+    //odtialto zavolam marking object inside ak prebieha init algoritmus
+    if(flagging_lbnodes_var_visc){
+        lbodes_variable_viscosity->marking_object_inside();
+    }
     reflagging_lbnodes_var_visc = false;
     flagging_lbnodes_var_visc = false;
     update_flags_variable_visc();
@@ -171,6 +175,10 @@ void add_oif_global_forces(double *area_volume, int molType) { // first-fold-the
         }
     }
 #ifdef LB_VARIABLE_VISCOSITY
+    //odtialto zavolam marking object inside ak prebieha init algoritmus
+    if(flagging_lbnodes_var_visc){
+        lbodes_variable_viscosity->marking_object_inside();
+    }
     reflagging_lbnodes_var_visc = false;
     flagging_lbnodes_var_visc = false;
     update_flags_variable_visc();

@@ -63,7 +63,7 @@ void LBodes_variable_viscosity::particle_from_main_loop(Particle &p) {
         C_unfolded = A_unfolded + get_mi_vector(p3->r.p, A_unfolded);
         Triangle triangle_folded{A_unfolded, B_unfolded, C_unfolded};
 
-        std::cout << "A " << A_unfolded[0] << "; " << A_unfolded[1] << "; " << A_unfolded[2] << std::endl;
+        //     std::cout << "A " << A_unfolded[0] << "; " << A_unfolded[1] << "; " << A_unfolded[2] << std::endl;
 
         if (making_update_algorithm) {
             //tu zas inak zareagujem na update algorithm
@@ -88,8 +88,60 @@ void LBodes_variable_viscosity::particle_from_main_loop(Particle &p) {
             }
             check_min_max_x_y(min_Py, max_Py, min_Pz, max_Pz, triangle_folded);
         }
+    }
+}
 
+void LBodes_variable_viscosity::marking_object_inside() {
+    //toto by mala byt dlzka x suradnice kanala.....teda lblattice.halo_grid[0]
+    int size_x = lblattice.halo_grid[0];
+    for (int pY = min_Py; pY < max_Py; ++pY) {
+        markingObjectInside(pY, min_Pz, max_Pz, 0, size_x);
+    }
+    for (int pY = min_Py; pY < max_Py; ++pY) {
+        remarkingObjectInside(pY, min_Pz, max_Pz, 0, size_x);
+    }
+}
 
+void LBodes_variable_viscosity::markingObjectInside(int pY, int minZ, int maxZ, int minX, int maxX) {
+    for (int pZ = minZ; pZ <= maxZ; ++pZ) {
+        int BN{0};
+        for (int pX = minX; pX < maxX; ++pX) {
+            VarViscNode U = lbfields[get_linear_index(pX,pY,pZ, lblattice.halo_grid)].varViscNode;
+
+            if (U.flag == Flag::boundary_flag && BN % 2 == 0) {
+                markNode(pX, pY, pZ, Vector3d{(double) pX, (double) pY, (double) pZ}, Flag::input);
+                BN++;
+            } else if (U.flag != Flag::boundary_flag && BN % 2 != 0) {
+                markNode(pX, pY, pZ, Vector3d{(double) pX, (double) pY, (double) pZ}, Flag::inner);
+            } else if (U.flag == Flag::boundary_flag && BN % 2 != 0) {
+                markNode(pX, pY, pZ, Vector3d{(double) pX, (double) pY, (double) pZ}, Flag::output);
+                BN++;
+            } else if (U.flag == Flag::input_output && BN % 2 == 0) {
+                BN += 2;
+            }
+
+            /*
+             * este vymysliet aky bude not_defined
+             * to ale ceknem len ci U.Z_point.x_folded == pX
+             * aspon si myslim...teda vlastne asi nie, lebo to musi byt cela plocha trojuholnika, nie len jedna hrana
+             */
+
+        }
+    }
+}
+
+void LBodes_variable_viscosity::remarkingObjectInside(int pY, int minZ, int maxZ, int minX, int maxX) {
+    for (int pZ = minZ; pZ <= maxZ; ++pZ) {
+        for (int pX = minX; pX < maxX; ++pX) {
+            VarViscNode U = lbfields[get_linear_index(pX,pY,pZ, lblattice.halo_grid)].varViscNode;
+            if (U.flag != Flag::outer) {
+                markNode(pX, pY, pZ, Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
+                                              std::numeric_limits<double>::quiet_NaN()}, Flag::inner);
+            } else {
+                markNode(pX, pY, pZ, Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
+                                              std::numeric_limits<double>::quiet_NaN()}, Flag::outer);
+            }
+        }
     }
 }
 
@@ -323,7 +375,8 @@ void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &bou
                         (actual_node.Z_point[0] - Z_node_temp[0])))) {
                 //ak je X rozdiel mensi, tak bude boundary, ale ak je == tak input/output
                 //to by chcelo nejako doriesit
-                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, Flag::boundary_flag);
+                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
+                         Flag::boundary_flag);
             } else if (actual_node.flag == Flag::boundary_flag) {
                 if (actual_node.Z_point[0] != Z_point[0]) {
                     markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
@@ -471,17 +524,14 @@ void LBodes_variable_viscosity::initial_algorithm() {
             }
         }
     }
-    //  print_lbnodes_variable_visc();
+    //print_lbnodes_variable_visc();
     // NEXT, we continue with reflagging over all cells. TODO.
 }
 
 void LBodes_variable_viscosity::update_algorithm() {
 
 
-
-
-
-    //  print_lbnodes_variable_visc();
+    print_lbnodes_variable_visc();
 }
 
 void LBodes_variable_viscosity::print_lbnodes_variable_visc() {

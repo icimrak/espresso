@@ -38,6 +38,8 @@ private:
                                std::vector<Vector3d > *boundaryPoints);
     void markingObjectBoundary(std::vector<Vector3d> &boundary_points, Vector3d normal_vector);
     void markNode(int x, int y, int z, Vector3d Z_point, Flag flag);
+    void markingObjectInside(int pY, int minZ, int maxZ, int minX, int maxX);
+    void remarkingObjectInside(int pY, int minZ, int maxZ, int minX, int maxX);
 
 public:
     bool making_initial_algorithm{false};
@@ -50,6 +52,8 @@ public:
     void update_algorithm();
 
     void print_lbnodes_variable_visc();
+
+    void marking_object_inside();
 
 };
 
