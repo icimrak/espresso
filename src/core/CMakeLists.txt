@@ -202,7 +202,8 @@ add_subdirectory(grid_based_algorithms)
 add_subdirectory(shapes)
 add_subdirectory(cluster_analysis)
 
+
 #for preprocessors macros
-#-D + name of definition....for example definition LB will be -DLB
-#add_definitions( -DEXTERNAL_FORCES -DMASS -DEXCLUSIONS -DLB -DLB_GPU -DLB_BOUNDARIES -DLB_VARIABLE_VISCOSITY
-#        -DSOFT_SPHERE -DOIF_LOCAL_FORCES -DOIF_GLOBAL_FORCES -DMEMBRANE_COLLISION -DIMMERSED_BOUNDARY)
+#name of definition....for example definition LB
+target_compile_definitions(EspressoCore PUBLIC EXTERNAL_FORCES MASS EXCLUSIONS LB LB_GPU LB_BOUNDARIES LB_VARIABLE_VISCOSITY
+        SOFT_SPHERE OIF_LOCAL_FORCES OIF_GLOBAL_FORCES MEMBRANE_COLLISION IMMERSED_BOUNDARY)
