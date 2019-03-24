@@ -97,7 +97,14 @@ template <size_t N_vel = 19> struct LB_Model {
 
 
 #ifdef LB_VARIABLE_VISCOSITY
-enum Flag {outer, boundary_flag, input, inner, output, input_output, not_defined};
+enum Flag {
+    outer, boundary_flag, input, inner, output, input_output, not_defined
+};
+
+struct VarViscNode {
+    Vector3d Z_point;
+    Flag flag;
+};
 #endif
 
 /** Data structure for fluid on a local lattice site */
@@ -111,7 +118,7 @@ struct LB_FluidNode {
   /** local force density */
   Vector3d force_density;
 #ifdef LB_VARIABLE_VISCOSITY
-  Flag flag;
+  VarViscNode varViscNode;
   double var_visc_gamma_shear;
   // other variables are ready in case bulk or TRT is used
   //double var_visc_gamma_bulk;

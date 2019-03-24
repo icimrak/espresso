@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <iostream>
 #include <float.h>
+#include <math.h>
 
 #include "particle_data.hpp"
 #include "bonded_interactions/bonded_interaction_data.hpp"
@@ -16,7 +17,7 @@
 #include "grid.hpp"
 #include "utils/math/triangle_functions.hpp"
 #include <vector>
-#include "Triangle.h"
+#include "Triangle.hpp"
 using Utils::get_n_triangle;
 
 class LBodes_variable_viscosity{
@@ -36,6 +37,7 @@ private:
     void findingObjectBoundary(Triangle triangle, int pY, Vector3d normal_vector, double d,
                                std::vector<Vector3d > *boundaryPoints);
     void markingObjectBoundary(std::vector<Vector3d> &boundary_points, Vector3d normal_vector);
+    void markNode(int x, int y, int z, Vector3d Z_point, Flag flag);
 
 public:
     bool making_initial_algorithm{false};

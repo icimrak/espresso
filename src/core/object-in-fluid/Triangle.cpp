@@ -2,7 +2,7 @@
 // Created by Tibor Postek on 16/11/2018.
 //
 
-#include "Triangle.h"
+#include "Triangle.hpp"
 
 
 Triangle::Triangle(Vector3d A, Vector3d B, Vector3d C)
