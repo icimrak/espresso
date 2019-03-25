@@ -139,7 +139,7 @@ void add_oif_global_forces(double *area_volume, int molType) { // first-fold-the
 
     for (auto &p : local_cells.particles()) {
 #ifdef LB_VARIABLE_VISCOSITY
-        lbodes_variable_viscosity->particle_from_main_loop(p);
+        //lbodes_variable_viscosity->particle_from_main_loop(p);
 #endif
         Vector3d p11, p22, p33;
         Particle *p1{nullptr}, *p2{nullptr}, *p3{nullptr};
@@ -223,6 +223,7 @@ bool calc_vectors_of_triangles(Particle &p, Vector3d &p11, Vector3d &p22, Vector
             p11 = unfolded_position(*p1);
             p22 = p11 + get_mi_vector(p2->r.p, p11);
             p33 = p11 + get_mi_vector(p3->r.p, p11);
+            printf("naslo mi to \n");
             return true;
         } else {
             j += n_partners;
