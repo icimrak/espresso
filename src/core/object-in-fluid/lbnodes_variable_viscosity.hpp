@@ -45,7 +45,7 @@ public:
     bool making_initial_algorithm{false};
     bool making_update_algorithm{false};
 
-    void particle_from_main_loop(Particle &p);
+    void particle_from_main_loop(Particle &p, int molType);
 
     void initial_algorithm();
 

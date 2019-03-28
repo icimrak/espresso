@@ -16,41 +16,54 @@ void LBodes_variable_viscosity::init_data_structure() {
     }
 }
 
-void LBodes_variable_viscosity::particle_from_main_loop(Particle &p) {
+void LBodes_variable_viscosity::particle_from_main_loop(Particle &p, int molType) {
     if (making_initial_algorithm || making_update_algorithm) {
         int j = 0;
-        p1 = &p;
+        auto p1 = &p;
+        while (j < p1->bl.n) {
+            /* bond type */
+            auto const type_num = p1->bl.e[j++];
+            auto iaparams = &bonded_ia_params[type_num];
+            auto const type = iaparams->type;
+            auto const n_partners = iaparams->num;
+            auto const id = p1->p.mol_id;
+            if (type == BONDED_IA_OIF_GLOBAL_FORCES &&
+                id == molType) { // BONDED_IA_OIF_GLOBAL_FORCES with correct molType
+                // test++;
+                /* fetch particle 2 */
+                auto p2 = local_particles[p1->bl.e[j++]];
+                if (!p2) {
+                    runtimeErrorMsg() << "add area: bond broken between particles "
+                                      << p1->p.identity << " and " << p1->bl.e[j - 1]
+                                      << " (particles not stored on the same node - "
+                                         "oif_globalforce2); n "
+                                      << p1->bl.n << " max " << p1->bl.max;
+                    return;
+                }
+                /* fetch particle 3 */
+                // if(n_partners>2){
+                auto p3 = local_particles[p1->bl.e[j++]];
+                if (!p3) {
+                    runtimeErrorMsg()
+                            << "add area: bond broken between particles " << p1->p.identity
+                            << ", " << p1->bl.e[j - 2] << " and " << p1->bl.e[j - 1]
+                            << " (particles not stored on the same node); n " << p1->bl.n
+                            << " max " << p1->bl.max;
+                    return;
+                }
 
-        // bond type
-        auto const type_num = p1->bl.e[j++];
-        iaparams = &bonded_ia_params[type_num];
-        auto const type = iaparams->type;
-        auto const n_partners = iaparams->num;
-        auto const id = p1->p.mol_id;
+                auto const p11 = unfolded_position(*p1);
+                auto const p22 = p11 + get_mi_vector(p2->r.p, p11);
+                auto const p33 = p11 + get_mi_vector(p3->r.p, p11);
 
-        // fetch particle 2
-        p2 = local_particles[p1->bl.e[j++]];
-        if (!p2) {
-            runtimeErrorMsg() << "add area: bond broken between particles "
-                              << p1->p.identity << " and " << p1->bl.e[j - 1]
-                              << " (particles not stored on the same node - "
-                                 "oif_globalforce2); n "
-                              << p1->bl.n << " max " << p1->bl.max;
-            return;
+                printf("Som tu\n");
+            } else {
+                j += n_partners;
+            }
         }
-        // fetch particle 3
-        // if(n_partners>2){
-        p3 = local_particles[p1->bl.e[j++]];
-        if (!p3) {
-            runtimeErrorMsg()
-                    << "add area: bond broken between particles " << p1->p.identity
-                    << ", " << p1->bl.e[j - 2] << " and " << p1->bl.e[j - 1]
-                    << " (particles not stored on the same node); n " << p1->bl.n
-                    << " max " << p1->bl.max;
-            return;
-        }
 
 
+/*
         //budem potrebovat aj folded aj unfolded
         A_unfolded = unfolded_position(*p1);
         B_unfolded = A_unfolded + get_mi_vector(p2->r.p, A_unfolded);
@@ -88,6 +101,7 @@ void LBodes_variable_viscosity::particle_from_main_loop(Particle &p) {
             }
             check_min_max_x_y(min_Py, max_Py, min_Pz, max_Pz, triangle_folded);
         }
+    }*/
     }
 }
 
@@ -531,7 +545,7 @@ void LBodes_variable_viscosity::initial_algorithm() {
 void LBodes_variable_viscosity::update_algorithm() {
 
 
-    print_lbnodes_variable_visc();
+   // print_lbnodes_variable_visc();
 }
 
 void LBodes_variable_viscosity::print_lbnodes_variable_visc() {
