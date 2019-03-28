@@ -106,11 +106,9 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
     int test = 0;
 
     for (auto &p : local_cells.particles()) {
-#ifdef LB_VARIABLE_VISCOSITY
-      //  lbodes_variable_viscosity->particle_from_main_loop(p, molType, VOL_partVol);
-#endif
         int j = 0;
         p1 = &p;
+        bool wasHere=false;
         while (j < p1->bl.n) {
             /* bond type */
             type_num = p1->bl.e[j++];
@@ -189,7 +187,15 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
                         }
                     }
                 }
-                printf("Som tu");
+
+#ifdef LB_VARIABLE_VISCOSITY
+                //budem potrebovat aj folded aj unfolded
+                Triangle triangle_unfolded{p11, p22, p33};
+                lbodes_variable_viscosity->particle_from_main_loop(triangle_unfolded);
+                wasHere = true;
+#endif
+
+
                 // unfolded positions correct
                 auto const VOL_A = area_triangle(p11, p22, p33);
                 partArea += VOL_A;
@@ -201,6 +207,10 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
             } else {
                 j += n_partners;
             }
+            if (!wasHere){
+                std::cout<< "Nebolo to tam\n"<<std::endl;
+            }
+
         }
 
     }
@@ -212,7 +222,7 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
 #ifdef LB_VARIABLE_VISCOSITY
     //odtialto zavolam marking object inside ak prebieha init algoritmus
     if (flagging_lbnodes_var_visc) {
-     //   lbodes_variable_viscosity->marking_object_inside();
+      //  lbodes_variable_viscosity->marking_object_inside();
     }
     reflagging_lbnodes_var_visc = false;
     flagging_lbnodes_var_visc = false;
@@ -228,9 +238,6 @@ void add_oif_global_forces(double *area_volume, int molType) { // first-fold-the
 
 
     for (auto &p : local_cells.particles()) {
-#ifdef LB_VARIABLE_VISCOSITY
-      //  lbodes_variable_viscosity->particle_from_main_loop(p, molType);
-#endif
         int j = 0;
         auto p1 = &p;
         while (j < p1->bl.n) {
@@ -308,17 +315,10 @@ void add_oif_global_forces(double *area_volume, int molType) { // first-fold-the
             }
         }
     }
-#ifdef LB_VARIABLE_VISCOSITY
-    //odtialto zavolam marking object inside ak prebieha init algoritmus
-    if (flagging_lbnodes_var_visc) {
-        lbodes_variable_viscosity->marking_object_inside();
-    }
-    reflagging_lbnodes_var_visc = false;
-    flagging_lbnodes_var_visc = false;
-    update_flags_variable_visc();
-#endif
 }
 
+
+//maybe future refactoring :)
 bool calc_vectors_of_triangles(Particle &p, Vector3d &p11, Vector3d &p22, Vector3d &p33, Particle *p1, Particle *p2,
                                Particle *p3, int molType, Bonded_ia_parameters *iaparams, int test) {
     int j = 0;
