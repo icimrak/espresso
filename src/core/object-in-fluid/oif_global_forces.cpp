@@ -169,7 +169,6 @@ void calc_oif_global(double *area_volume,
             }
           }
         }
-
         // unfolded positions correct
         auto const VOL_A = area_triangle(p11, p22, p33);
         partArea += VOL_A;

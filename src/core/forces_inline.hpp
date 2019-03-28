@@ -734,6 +734,15 @@ inline void add_bonded_force(Particle *p1) {
 
       for (j = 0; j < 3; j++) {
         switch (type) {
+#ifdef OIF_LASER
+        case BONDED_IA_OIF_LASER:
+          for (j = 0; j < 3; j++) {
+            p1->f.f[j] += force[j];
+            p2->f.f[j] += force2[j];
+            p3->f.f[j] += force3[j];
+          }
+          break;
+#endif
         default:
           p1->f.f[j] += force[j];
           p2->f.f[j] += force2[j];
@@ -766,15 +775,6 @@ inline void add_bonded_force(Particle *p1) {
           p2->f.f[j] += force[j];
           p3->f.f[j] += force3[j];
           p4->f.f[j] += force4[j];
-        }
-        break;
-#endif
-#ifdef OIF_LASER
-      case BONDED_IA_OIF_LASER:
-        for (j = 0; j < 3; j++) {
-          p1->f.f[j] += force[j];
-          p2->f.f[j] += force2[j];
-          p3->f.f[j] += force3[j];
         }
         break;
 #endif
