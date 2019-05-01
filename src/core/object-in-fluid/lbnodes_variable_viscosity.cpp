@@ -5,34 +5,37 @@
 #include "lbnodes_variable_viscosity.hpp"
 
 void LBodes_variable_viscosity::init_data_structure() {
-    for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
-        for (int y = 0; y < lblattice.halo_grid[1]; ++y) {
-            for (int z = 0; z < lblattice.halo_grid[2]; ++z) {
-                int index = get_linear_index(x, y, z, lblattice.halo_grid);
-                lbfields[index].var_visc_gamma_shear = std::numeric_limits<double>::quiet_NaN();
-                lbfields[index].varViscNode.flag = Flag::outer;
+    // std::cout << "init data structure" << std::endl;
+    size_x = (int) box_l[0];
+    size_y = (int) box_l[1];
+    size_z = (int) box_l[2];
+
+    //  std::cout << size_x <<" " <<size_y << " "<<size_z << std::endl;
+
+    my_grid_var_visc = new VarViscNode **[size_x];
+    for (size_t x = 0; x < size_x; ++x) {
+        *(my_grid_var_visc + x) = new VarViscNode *[size_y];
+        for (int y = 0; y < size_y; ++y) {
+            my_grid_var_visc[x][y] = new VarViscNode[size_z];
+            for (int z = 0; z < size_z; ++z) {
+                //   int index = get_linear_index(x, y, z, my_grid_var_visc);
+                //  lbfields[index].var_visc_gamma_shear = std::numeric_limits<double>::quiet_NaN();
+                //  lbfields[index].varViscNode.flag = Flag::outer;
+                my_grid_var_visc[x][y][z] = VarViscNode{
+                        Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
+                                 std::numeric_limits<double>::quiet_NaN()}, Flag::outer};
             }
         }
     }
+    //   std::cout << "end of init data structure" << std::endl;
 }
 
-void LBodes_variable_viscosity::particle_from_main_loop(Triangle &unfolded_triangle) {
+void LBodes_variable_viscosity::particle_from_main_loop(Triangle &unfolded_triangle, Triangle &folded_triangle,
+                                                        int &coutOfBPoints) {
     if (making_initial_algorithm || making_update_algorithm) {
 
-/*
-        //budem potrebovat aj folded aj unfolded
-        A_unfolded = unfolded_position(*p1);
-        B_unfolded = A_unfolded + get_mi_vector(p2->r.p, A_unfolded);
-        C_unfolded = A_unfolded + get_mi_vector(p3->r.p, A_unfolded);
-        Triangle triangle_unfolded{A_unfolded, B_unfolded, C_unfolded};
-
-        //neviem ci folded robim spravne
-        A_unfolded = folded_position(*p1);
-        B_unfolded = A_unfolded + get_mi_vector(p2->r.p, A_unfolded);
-        C_unfolded = A_unfolded + get_mi_vector(p3->r.p, A_unfolded);
-        Triangle triangle_folded{A_unfolded, B_unfolded, C_unfolded};*/
-
-        //     std::cout << "A " << A_unfolded[0] << "; " << A_unfolded[1] << "; " << A_unfolded[2] << std::endl;
+        //   std::cout << "Unfolded: "<< "A " << unfolded_triangle.getA()[0] << "; " << unfolded_triangle.getA()[1] << "; " << unfolded_triangle.getA()[2] << std::endl;
+        //  std::cout << "Folded: "<< "A " << folded_triangle.getA()[0] << "; " << folded_triangle.getA()[1] << "; " << folded_triangle.getA()[2] << std::endl;
 
         if (making_update_algorithm) {
             //tu zas inak zareagujem na update algorithm
@@ -41,8 +44,18 @@ void LBodes_variable_viscosity::particle_from_main_loop(Triangle &unfolded_trian
             //tu nejako zareagujem ak robim initial algorithm
 
             //normalovy vektor
-            const Vector3d normal_vector = get_n_triangle(unfolded_triangle.getA(), unfolded_triangle.getB(),
-                                                          unfolded_triangle.getC()).normalize();
+            const Vector3d normal_vector = get_n_triangle(unfolded_triangle.getB(), unfolded_triangle.getC(),
+                                                          unfolded_triangle.getA()).normalize();
+
+            //    const Vector3d AB{unfolded_triangle.getB()[0] - unfolded_triangle.getA()[0],
+            //                      unfolded_triangle.getB()[1] - unfolded_triangle.getA()[1],
+            //                      unfolded_triangle.getB()[2] - unfolded_triangle.getA()[2]};
+            //   const Vector3d AC{unfolded_triangle.getC()[0] - unfolded_triangle.getA()[0],
+            //                     unfolded_triangle.getC()[1] - unfolded_triangle.getA()[1],
+            //                     unfolded_triangle.getC()[2] - unfolded_triangle.getA()[2]};
+            //vektorovy sucin AB x_folded AC
+            //    const Vector3d normal_vector{AB[1] * AC[2] - AB[2] * AC[1], AB[2] * AC[0] - AB[0] * AC[2],
+            //                         AB[0] * AC[1] - AB[1] * AC[0]};
             //parameter d z rovnice roviny
             double d = -(normal_vector[0] * unfolded_triangle.getA()[0] +
                          normal_vector[1] * unfolded_triangle.getA()[1] +
@@ -53,10 +66,11 @@ void LBodes_variable_viscosity::particle_from_main_loop(Triangle &unfolded_trian
                     std::max({unfolded_triangle.getA()[1], unfolded_triangle.getB()[1], unfolded_triangle.getC()[1]}));
 
             //pre vsetky Py z toho intervalu potrebujem najst vhodne t
-            std::vector <Vector3d> boundaryPoints;
+            std::vector<Vector3d> boundaryPoints;
             for (int pY = minY; pY <= maxY; ++pY) {
                 //tuto som mal asi poslat folded_triangle
                 findingObjectBoundary(unfolded_triangle, pY, normal_vector, d, &boundaryPoints);
+                coutOfBPoints += boundaryPoints.size();
                 markingObjectBoundary(boundaryPoints, normal_vector);
                 boundaryPoints.clear();
             }
@@ -68,7 +82,7 @@ void LBodes_variable_viscosity::particle_from_main_loop(Triangle &unfolded_trian
 
 void LBodes_variable_viscosity::marking_object_inside() {
     //toto by mala byt dlzka x suradnice kanala.....teda lblattice.halo_grid[0]
-    int size_x = lblattice.halo_grid[0];
+    //  int size_x = my_grid_var_visc[0];
     for (int pY = min_Py; pY < max_Py; ++pY) {
         markingObjectInside(pY, min_Pz, max_Pz, 0, size_x);
     }
@@ -81,8 +95,8 @@ void LBodes_variable_viscosity::markingObjectInside(int pY, int minZ, int maxZ, 
     for (int pZ = minZ; pZ <= maxZ; ++pZ) {
         int BN{0};
         for (int pX = minX; pX < maxX; ++pX) {
-            VarViscNode U = lbfields[get_linear_index(pX, pY, pZ, lblattice.halo_grid)].varViscNode;
-
+            //VarViscNode U = lbfields[get_linear_index(pX, pY, pZ, my_grid_var_visc)].varViscNode;
+            VarViscNode U = my_grid_var_visc[pX][pY][pZ];
             if (U.flag == Flag::boundary_flag && BN % 2 == 0) {
                 markNode(pX, pY, pZ, Vector3d{(double) pX, (double) pY, (double) pZ}, Flag::input);
                 BN++;
@@ -108,7 +122,8 @@ void LBodes_variable_viscosity::markingObjectInside(int pY, int minZ, int maxZ, 
 void LBodes_variable_viscosity::remarkingObjectInside(int pY, int minZ, int maxZ, int minX, int maxX) {
     for (int pZ = minZ; pZ <= maxZ; ++pZ) {
         for (int pX = minX; pX < maxX; ++pX) {
-            VarViscNode U = lbfields[get_linear_index(pX, pY, pZ, lblattice.halo_grid)].varViscNode;
+            //   VarViscNode U = lbfields[get_linear_index(pX, pY, pZ, my_grid_var_visc)].varViscNode;
+            VarViscNode U = my_grid_var_visc[pX][pY][pZ];
             if (U.flag != Flag::outer) {
                 markNode(pX, pY, pZ,
                          Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
@@ -123,14 +138,14 @@ void LBodes_variable_viscosity::remarkingObjectInside(int pY, int minZ, int maxZ
 }
 
 void LBodes_variable_viscosity::findingObjectBoundary(Triangle triangle, int pY, Vector3d normal_vector, double d,
-                                                      std::vector <Vector3d> *boundaryPoints) {
+                                                      std::vector<Vector3d> *boundaryPoints) {
     int count_NAN{0};
     //ak pretina danu usecku
     bool cuts_A = false;
     bool cuts_B = false;
     bool cuts_C = false;
     //potrebujem zistit suradnice P1 a P2
-    std::vector <Vector3d> P_points;
+    std::vector<Vector3d> P_points;
 
     double t_AB = (pY - triangle.getA()[1]) / (triangle.getB()[1] - triangle.getA()[1]);
     if (triangle.getB()[1] - triangle.getA()[1] == 0.000000 && (t_AB == 0 || t_AB == 1)) {
@@ -302,14 +317,14 @@ void LBodes_variable_viscosity::findingObjectBoundary(Triangle triangle, int pY,
     }
 }
 
-void LBodes_variable_viscosity::markingObjectBoundary(std::vector <Vector3d> &boundary_points, Vector3d normal_vector) {
+void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &boundary_points, Vector3d normal_vector) {
     for (size_t k = 0; k < boundary_points.size(); ++k) {
         Vector3d Z_point = boundary_points.at(k);
         int x_low = floor(Z_point[0]);
         int x_high = ceil(Z_point[0]);
 
         //toto by mala byt dlzka x suradnice kanala.....teda lblattice.halo_grid[0]
-        if (x_high == lblattice.halo_grid[0]) {
+        if (x_high == size_x) {
             x_high = 0;
         }
 
@@ -340,8 +355,9 @@ void LBodes_variable_viscosity::markingObjectBoundary(std::vector <Vector3d> &bo
 
         //Do LB nodov si budem ukladat aj Z_point bod, ktory ma preflagoval, aby som vedel rozhodnut, ze ak su
         // napr bunky strasne natesno, tak aby mi to nepreflagovali
-        VarViscNode actual_node = lbfields[get_linear_index((int) Z_node_temp[0], (int) Z_node_temp[1],
-                                                            (int) Z_node_temp[2], lblattice.halo_grid)].varViscNode;
+        //  VarViscNode actual_node = lbfields[get_linear_index((int) Z_node_temp[0], (int) Z_node_temp[1],
+        //                                                    (int) Z_node_temp[2], my_grid_var_visc)].varViscNode;
+        VarViscNode actual_node = my_grid_var_visc[(int) Z_node_temp[0]][(int) Z_node_temp[1]][(int) Z_node_temp[2]];
 
         if (cos_alpha_low >= 0) {
             //  cout << "Bod " << "x_folded= " << Z_node_temp[0] << ", y= " << Z_node_temp[1] << " z= " << Z_node_temp[2]
@@ -374,8 +390,10 @@ void LBodes_variable_viscosity::markingObjectBoundary(std::vector <Vector3d> &bo
         }
         if (x_low != x_high) {
             Z_node_temp[0] = x_high;
-            actual_node = lbfields[get_linear_index((int) Z_node_temp[0], (int) Z_node_temp[1],
-                                                    (int) Z_node_temp[2], lblattice.halo_grid)].varViscNode;
+            //  actual_node = lbfields[get_linear_index((int) Z_node_temp[0], (int) Z_node_temp[1],
+            //                                         (int) Z_node_temp[2], my_grid_var_visc)].varViscNode;
+
+            actual_node = my_grid_var_visc[(int) Z_node_temp[0]][(int) Z_node_temp[1]][(int) Z_node_temp[2]];
 
 
             if (cos_alpha_high >= 0) {
@@ -456,10 +474,12 @@ void LBodes_variable_viscosity::check_min_max_x_y(double &min_y, double &max_y, 
 
 
 void LBodes_variable_viscosity::markNode(int x, int y, int z, Vector3d Z_point, Flag flag) {
-    int index = get_linear_index(x, y, z, lblattice.halo_grid);
+    // int index = get_linear_index(x, y, z, my_grid_var_visc);
     //tu budem musiet nastavit aj presnu hodnotu (double)
     // lbfields[index].var_visc_gamma_shear
-    lbfields[index].varViscNode = VarViscNode{Z_point, flag};
+    //   lbfields[index].varViscNode = VarViscNode{Z_point, flag};
+    my_grid_var_visc[x][y][z] = VarViscNode{Z_point, flag};
+    coutOfMarkedNodes++;
 }
 
 
@@ -478,45 +498,47 @@ void LBodes_variable_viscosity::initial_algorithm() {
 
 
 // initializes the variable viscosity fields, all the fields will be constant with viscosity values given by lbfluid.
-    for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
-        for (int y = 0; y < lblattice.halo_grid[1]; ++y) {
-            for (int z = 0; z < lblattice.halo_grid[2]; ++z) {
-                int index = get_linear_index(x, y, z, lblattice.halo_grid);
+    /*  for (int x = 1; x < my_grid_var_visc[0]; ++x) {
+          for (int y = 1; y < my_grid_var_visc[1]; ++y) {
+              for (int z = 1; z < my_grid_var_visc[2]; ++z) {
+                  int index = get_linear_index(x, y, z, my_grid_var_visc);
 
-                //outer viscosity of cell
-                lbfields[index].var_visc_gamma_shear = 1. - 2. /
-                                                            (6. * lbpar.viscosity * lbpar.tau /
-                                                             (lbpar.agrid * lbpar.agrid) + 1.);
-
-
-                //inner viscosity of cell
-                //  lbfields[index].var_visc_gamma_shear = 1. - 2. /
-                //         (6. * inner_fluid_visc * lbpar.tau /(lbpar.agrid * lbpar.agrid) + 1.);
+                  //outer viscosity of cell
+                  lbfields[index].var_visc_gamma_shear = 1. - 2. /
+                                                              (6. * lbpar.viscosity * lbpar.tau /
+                                                               (lbpar.agrid * lbpar.agrid) + 1.);
 
 
-                //Currently not defined variable
-                // lbfields[index].var_visc_gamma_bulk = 1. - 2. /
-                //         (9. * lbpar.bulk_viscosity * lbpar.tau / (lbpar.agrid * lbpar.agrid) + 1.);
+                  //inner viscosity of cell
+                  //  lbfields[index].var_visc_gamma_shear = 1. - 2. /
+                  //         (6. * inner_fluid_visc * lbpar.tau /(lbpar.agrid * lbpar.agrid) + 1.);
 
-            }
-        }
-    }
+
+                  //Currently not defined variable
+                  // lbfields[index].var_visc_gamma_bulk = 1. - 2. /
+                  //         (9. * lbpar.bulk_viscosity * lbpar.tau / (lbpar.agrid * lbpar.agrid) + 1.);
+
+              }
+          }
+      }*/
     //print_lbnodes_variable_visc();
     // NEXT, we continue with reflagging over all cells. TODO.
+    // print_lbnodes_variable_visc();
 }
 
 void LBodes_variable_viscosity::update_algorithm() {
 
-    print_lbnodes_variable_visc();
+    //  print_lbnodes_variable_visc();
 }
 
 void LBodes_variable_viscosity::print_lbnodes_variable_visc() {
     //printing all LB nodes with viscosity
-    for (int y = 0; y < lblattice.halo_grid[1]; ++y) {
-        for (int z = 0; z < lblattice.halo_grid[2]; ++z) {
-            for (int x = 0; x < lblattice.halo_grid[0]; ++x) {
-                int index = get_linear_index(x, y, z, lblattice.halo_grid);
-                std::cout << lbfields[index].varViscNode.flag;
+    for (int y = 1; y < size_y; ++y) {
+        for (int z = 1; z < size_z; ++z) {
+            for (int x = 1; x < size_x; ++x) {
+                // int index = get_linear_index(x, y, z, my_grid_var_visc);
+                //  std::cout << lbfields[index].varViscNode.flag;
+                std::cout << my_grid_var_visc[x][y][z].flag;
             }
             std::cout << " -> Y-" << y << ", Z-" << z << std::endl;
         }

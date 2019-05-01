@@ -46,6 +46,9 @@ int Lattice::init(double *agrid, double const *offset, int halo_size,
                               this->agrid[d]);
   }
 
+
+
+
   // sanity checks
   for (int dir = 0; dir < 3; dir++) {
     // check if local_box_l is compatible with lattice spacing

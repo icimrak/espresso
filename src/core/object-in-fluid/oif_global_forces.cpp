@@ -96,7 +96,8 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
 
     /* loop over particles */
     Particle *p1, *p2, *p3;
-    Vector3d p11, p22, p33;
+    Vector3d p11_unfolded, p22_unfolded, p33_unfolded;
+    Vector3d p11_folded, p22_folded, p33_folded;
     int img[3];
     double AA[3], BB[3];
     Bonded_ia_parameters *iaparams;
@@ -105,10 +106,14 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
 
     int test = 0;
 
+    unsigned long cout_of_particles = local_cells.particles().size();
+    unsigned long cout_of_traversed_particles{0};
+    int coutOfBPoints{0};
+    lbodes_variable_viscosity->coutOfMarkedNodes = 0;
+
     for (auto &p : local_cells.particles()) {
         int j = 0;
         p1 = &p;
-        bool wasHere=false;
         while (j < p1->bl.n) {
             /* bond type */
             type_num = p1->bl.e[j++];
@@ -150,34 +155,37 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
                 if (p1->l.ghost != 1) {
                     // unfold non-ghost particle using image, because for physical
                     // particles, the structure p->l.i is correctly set
-                    p11 = unfolded_position(p1);
+                    p11_unfolded = unfolded_position(p1);
+                    p11_folded = folded_position(p1);
                     // other coordinates are obtained from its relative positions to the
                     // reference particle
-                    get_mi_vector(AA, p2->r.p, p11);
-                    get_mi_vector(BB, p3->r.p, p11);
+                    get_mi_vector(AA, p2->r.p, p11_unfolded);
+                    get_mi_vector(BB, p3->r.p, p11_unfolded);
                     for (int i = 0; i < 3; i++) {
-                        p22[i] = p11[i] + AA[i];
-                        p33[i] = p11[i] + BB[i];
+                        p22_unfolded[i] = p11_unfolded[i] + AA[i];
+                        p33_unfolded[i] = p11_unfolded[i] + BB[i];
                     }
                 } else {
                     // in case the first particle is a ghost particle
                     if (p2->l.ghost != 1) {
-                        p22 = unfolded_position(p2);
-                        get_mi_vector(AA, p1->r.p, p22);
-                        get_mi_vector(BB, p3->r.p, p22);
+                        p22_unfolded = unfolded_position(p2);
+                        p22_folded = folded_position(p2);
+                        get_mi_vector(AA, p1->r.p, p22_unfolded);
+                        get_mi_vector(BB, p3->r.p, p22_unfolded);
                         for (int i = 0; i < 3; i++) {
-                            p11[i] = p22[i] + AA[i];
-                            p33[i] = p22[i] + BB[i];
+                            p11_unfolded[i] = p22_unfolded[i] + AA[i];
+                            p33_unfolded[i] = p22_unfolded[i] + BB[i];
                         }
                     } else {
                         // in case the first and the second particle are ghost particles
                         if (p3->l.ghost != 1) {
-                            p33 = unfolded_position(p3);
-                            get_mi_vector(AA, p1->r.p, p33);
-                            get_mi_vector(BB, p2->r.p, p33);
+                            p33_unfolded = unfolded_position(p3);
+                            p33_folded = folded_position(p3);
+                            get_mi_vector(AA, p1->r.p, p33_unfolded);
+                            get_mi_vector(BB, p2->r.p, p33_unfolded);
                             for (int i = 0; i < 3; i++) {
-                                p11[i] = p33[i] + AA[i];
-                                p22[i] = p33[i] + BB[i];
+                                p11_unfolded[i] = p33_unfolded[i] + AA[i];
+                                p22_unfolded[i] = p33_unfolded[i] + BB[i];
                             }
                         } else {
                             printf("Something wrong in oif_global_forces.hpp: All particles "
@@ -187,30 +195,27 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
                         }
                     }
                 }
+                cout_of_traversed_particles++;
 
 #ifdef LB_VARIABLE_VISCOSITY
                 //budem potrebovat aj folded aj unfolded
-                Triangle triangle_unfolded{p11, p22, p33};
-                lbodes_variable_viscosity->particle_from_main_loop(triangle_unfolded);
-                wasHere = true;
+                Triangle triangle_unfolded{p11_unfolded, p22_unfolded, p33_unfolded};
+                Triangle triangle_folded{p11_folded, p22_folded, p33_folded};
+                lbodes_variable_viscosity->particle_from_main_loop(triangle_unfolded, triangle_folded, coutOfBPoints);
 #endif
 
 
                 // unfolded positions correct
-                auto const VOL_A = area_triangle(p11, p22, p33);
+                auto const VOL_A = area_triangle(p11_unfolded, p22_unfolded, p33_unfolded);
                 partArea += VOL_A;
 
-                auto const VOL_norm = get_n_triangle(p11, p22, p33);
+                auto const VOL_norm = get_n_triangle(p11_unfolded, p22_unfolded, p33_unfolded);
                 auto const VOL_dn = VOL_norm.norm();
-                auto const VOL_hz = 1.0 / 3.0 * (p11[2] + p22[2] + p33[2]);
+                auto const VOL_hz = 1.0 / 3.0 * (p11_unfolded[2] + p22_unfolded[2] + p33_unfolded[2]);
                 VOL_partVol += VOL_A * -1 * VOL_norm[2] / VOL_dn * VOL_hz;
             } else {
                 j += n_partners;
             }
-            if (!wasHere){
-                std::cout<< "Nebolo to tam\n"<<std::endl;
-            }
-
         }
 
     }
@@ -219,14 +224,18 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
     part_area_volume[1] = VOL_partVol;
 
     MPI_Allreduce(part_area_volume, area_volume, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
 #ifdef LB_VARIABLE_VISCOSITY
     //odtialto zavolam marking object inside ak prebieha init algoritmus
     if (flagging_lbnodes_var_visc) {
-      //  lbodes_variable_viscosity->marking_object_inside();
+        lbodes_variable_viscosity->marking_object_inside();
+       // std::cout << coutOfBPoints << std::endl;
+      //  std::cout << lbodes_variable_viscosity->coutOfMarkedNodes << std::endl;
+        lbodes_variable_viscosity->print_lbnodes_variable_visc();
     }
     reflagging_lbnodes_var_visc = false;
     flagging_lbnodes_var_visc = false;
-    update_flags_variable_visc();
+    //  update_flags_variable_visc();
 #endif
 }
 

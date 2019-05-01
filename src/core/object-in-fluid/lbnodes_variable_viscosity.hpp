@@ -17,6 +17,7 @@
 #include "grid.hpp"
 #include "utils/math/triangle_functions.hpp"
 #include <vector>
+#include <grid_based_algorithms/lb.hpp>
 #include "Triangle.hpp"
 using Utils::get_n_triangle;
 
@@ -27,6 +28,11 @@ private:
     Vector3d A_folded, B_folded, C_folded;
     Particle *p1{nullptr}, *p2{nullptr}, *p3{nullptr};
     Bonded_ia_parameters *iaparams{nullptr};
+    VarViscNode ***my_grid_var_visc;
+
+    int size_x{(int)box_l[0]};
+    int size_y{(int)box_l[1]};
+    int size_z{(int)box_l[3]};
 
     double min_Py{DBL_MAX};
     double max_Py{DBL_MIN};
@@ -45,7 +51,7 @@ public:
     bool making_initial_algorithm{false};
     bool making_update_algorithm{false};
 
-    void particle_from_main_loop(Triangle &unfolded_triangle);
+    void particle_from_main_loop(Triangle &unfolded_triangle, Triangle &folded_triangle, int &coutOfBPoints);
 
     void initial_algorithm();
 
@@ -54,6 +60,7 @@ public:
     void print_lbnodes_variable_visc();
 
     void marking_object_inside();
+    int coutOfMarkedNodes{0};
 
 };
 
