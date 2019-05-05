@@ -228,8 +228,8 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
 #ifdef LB_VARIABLE_VISCOSITY
     //odtialto zavolam marking object inside ak prebieha init algoritmus
     if (flagging_lbnodes_var_visc) {
-      //  lbodes_variable_viscosity->marking_object_inside();
-        std::cout << coutOfBPoints << std::endl;
+        lbodes_variable_viscosity->marking_object_inside();
+       /* std::cout << coutOfBPoints << std::endl;
         std::cout << lbodes_variable_viscosity->coutOfMarkedNodes << std::endl;
         std::cout << "Count of readed nodes "<< lbodes_variable_viscosity->count_of_readed_nodes << std::endl;
 
@@ -239,12 +239,12 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
         std::cout << "count of inner nodes " << lbodes_variable_viscosity->count_inner << std::endl;
         std::cout << "count of outer nodes " << lbodes_variable_viscosity->count_outer << std::endl;
         std::cout << "count of boundary nodes " << lbodes_variable_viscosity->count_boundary << std::endl;
-        std::cout << "count of not_defined nodes " << lbodes_variable_viscosity->count_not_defined << std::endl;
+        std::cout << "count of not_defined nodes " << lbodes_variable_viscosity->count_not_defined << std::endl;*/
         lbodes_variable_viscosity->print_lbnodes_variable_visc();
     }
     reflagging_lbnodes_var_visc = false;
     flagging_lbnodes_var_visc = false;
-    //  update_flags_variable_visc();
+      update_flags_variable_visc();
 #endif
 }
 
