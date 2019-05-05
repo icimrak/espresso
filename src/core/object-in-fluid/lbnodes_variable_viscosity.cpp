@@ -10,7 +10,7 @@ void LBodes_variable_viscosity::init_data_structure() {
     size_y = (int) box_l[1];
     size_z = (int) box_l[2];
 
-    //  std::cout << size_x <<" " <<size_y << " "<<size_z << std::endl;
+    //   std::cout << size_x <<" " <<size_y << " "<<size_z << std::endl;
 
     my_grid_var_visc = new VarViscNode **[size_x];
     for (size_t x = 0; x < size_x; ++x) {
@@ -18,16 +18,19 @@ void LBodes_variable_viscosity::init_data_structure() {
         for (int y = 0; y < size_y; ++y) {
             my_grid_var_visc[x][y] = new VarViscNode[size_z];
             for (int z = 0; z < size_z; ++z) {
-                //   int index = get_linear_index(x, y, z, my_grid_var_visc);
-                //  lbfields[index].var_visc_gamma_shear = std::numeric_limits<double>::quiet_NaN();
-                //  lbfields[index].varViscNode.flag = Flag::outer;
-                my_grid_var_visc[x][y][z] = VarViscNode{
-                        Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
-                                 std::numeric_limits<double>::quiet_NaN()}, Flag::outer};
+                //get_node(x, y, z).var_visc_gamma_shear = std::numeric_limits<double>::quiet_NaN();
+                get_node(x, y, z).flag = Flag::outer;
+                get_node(x, y, z).Z_point = Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
+                                                     std::numeric_limits<double>::quiet_NaN()};
+                /*  get_node(x, y, z) = VarViscNode{
+                          //my_grid_var_visc[x][y][z] =  VarViscNode{
+                          Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
+                                   std::numeric_limits<double>::quiet_NaN()}, Flag::outer};
+              }*/
             }
         }
+        //   std::cout << "end of init data structure" << std::endl;
     }
-    //   std::cout << "end of init data structure" << std::endl;
 }
 
 void LBodes_variable_viscosity::particle_from_main_loop(Triangle &unfolded_triangle, Triangle &folded_triangle,
@@ -95,8 +98,7 @@ void LBodes_variable_viscosity::markingObjectInside(int pY, int minZ, int maxZ, 
     for (int pZ = minZ; pZ <= maxZ; ++pZ) {
         int BN{0};
         for (int pX = minX; pX < maxX; ++pX) {
-            //VarViscNode U = lbfields[get_linear_index(pX, pY, pZ, my_grid_var_visc)].varViscNode;
-            VarViscNode U = my_grid_var_visc[pX][pY][pZ];
+            VarViscNode U = get_node(pX, pY, pZ);
             if (U.flag == Flag::boundary_flag && BN % 2 == 0) {
                 markNode(pX, pY, pZ, Vector3d{(double) pX, (double) pY, (double) pZ}, Flag::input);
                 BN++;
@@ -122,8 +124,7 @@ void LBodes_variable_viscosity::markingObjectInside(int pY, int minZ, int maxZ, 
 void LBodes_variable_viscosity::remarkingObjectInside(int pY, int minZ, int maxZ, int minX, int maxX) {
     for (int pZ = minZ; pZ <= maxZ; ++pZ) {
         for (int pX = minX; pX < maxX; ++pX) {
-            //   VarViscNode U = lbfields[get_linear_index(pX, pY, pZ, my_grid_var_visc)].varViscNode;
-            VarViscNode U = my_grid_var_visc[pX][pY][pZ];
+            VarViscNode U = get_node(pX, pY, pZ);
             if (U.flag != Flag::outer) {
                 markNode(pX, pY, pZ,
                          Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
@@ -355,9 +356,7 @@ void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &bou
 
         //Do LB nodov si budem ukladat aj Z_point bod, ktory ma preflagoval, aby som vedel rozhodnut, ze ak su
         // napr bunky strasne natesno, tak aby mi to nepreflagovali
-        //  VarViscNode actual_node = lbfields[get_linear_index((int) Z_node_temp[0], (int) Z_node_temp[1],
-        //                                                    (int) Z_node_temp[2], my_grid_var_visc)].varViscNode;
-        VarViscNode actual_node = my_grid_var_visc[(int) Z_node_temp[0]][(int) Z_node_temp[1]][(int) Z_node_temp[2]];
+        VarViscNode actual_node = get_node((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2]);
 
         if (cos_alpha_low >= 0) {
             //  cout << "Bod " << "x_folded= " << Z_node_temp[0] << ", y= " << Z_node_temp[1] << " z= " << Z_node_temp[2]
@@ -390,11 +389,7 @@ void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &bou
         }
         if (x_low != x_high) {
             Z_node_temp[0] = x_high;
-            //  actual_node = lbfields[get_linear_index((int) Z_node_temp[0], (int) Z_node_temp[1],
-            //                                         (int) Z_node_temp[2], my_grid_var_visc)].varViscNode;
-
-            actual_node = my_grid_var_visc[(int) Z_node_temp[0]][(int) Z_node_temp[1]][(int) Z_node_temp[2]];
-
+            actual_node = get_node((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2]);
 
             if (cos_alpha_high >= 0) {
                 //    cout << "Bod " << "x_folded= " << Z_node_temp[0] << ", y= " << Z_node_temp[1] << " z= " << Z_node_temp[2]
@@ -472,13 +467,43 @@ void LBodes_variable_viscosity::check_min_max_x_y(double &min_y, double &max_y, 
     }
 }
 
+VarViscNode &LBodes_variable_viscosity::get_node(int x, int y, int z) {
+    //return my_grid_var_visc[x][y][z];
+    size_t index = get_linear_index(x, y, z, lblattice.halo_grid);
+   // if (lbfields[index].varViscNode.flag != Flag::outer) {
+     //   std::cout << x << " " << y << " " << z << " FLAG " << lbfields[index].varViscNode.flag << std::endl;
+    //}
+    count_of_readed_nodes++;
+    return lbfields[index].varViscNode;
+}
 
 void LBodes_variable_viscosity::markNode(int x, int y, int z, Vector3d Z_point, Flag flag) {
-    // int index = get_linear_index(x, y, z, my_grid_var_visc);
-    //tu budem musiet nastavit aj presnu hodnotu (double)
-    // lbfields[index].var_visc_gamma_shear
-    //   lbfields[index].varViscNode = VarViscNode{Z_point, flag};
-    my_grid_var_visc[x][y][z] = VarViscNode{Z_point, flag};
+    get_node(x, y, z) = VarViscNode{Z_point, flag};
+    switch (flag) {
+        case Flag::outer :
+            count_outer++;
+            break;
+        case Flag::inner :
+            count_inner++;
+            break;
+        case Flag::boundary_flag :
+            count_boundary++;
+            break;
+        case Flag::input :
+            count_input++;
+            break;
+        case Flag::output :
+            count_output++;
+            break;
+        case Flag::input_output :
+            count_input_output++;
+            break;
+        case Flag::not_defined :
+            count_not_defined++;
+            break;
+        default:
+            break;
+    }
     coutOfMarkedNodes++;
 }
 
@@ -536,9 +561,7 @@ void LBodes_variable_viscosity::print_lbnodes_variable_visc() {
     for (int y = 1; y < size_y; ++y) {
         for (int z = 1; z < size_z; ++z) {
             for (int x = 1; x < size_x; ++x) {
-                // int index = get_linear_index(x, y, z, my_grid_var_visc);
-                //  std::cout << lbfields[index].varViscNode.flag;
-                std::cout << my_grid_var_visc[x][y][z].flag;
+                std::cout << get_node(x, y, z).flag;
             }
             std::cout << " -> Y-" << y << ", Z-" << z << std::endl;
         }
