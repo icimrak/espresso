@@ -71,19 +71,6 @@ public:
     void print_lbnodes_variable_visc();
 
     void marking_object_inside();
-
-    int coutOfMarkedNodes{0};
-
-    int count_of_readed_nodes{0};
-
-    int count_outer{0};
-    int count_boundary{0};
-    int count_inner{0};
-    int count_input{0};
-    int count_output{0};
-    int count_input_output{0};
-    int count_not_defined{0};
-
 };
 
 

@@ -5,12 +5,9 @@
 #include "lbnodes_variable_viscosity.hpp"
 
 void LBodes_variable_viscosity::init_data_structure() {
-    // std::cout << "init data structure" << std::endl;
     size_x = (int) box_l[0];
     size_y = (int) box_l[1];
     size_z = (int) box_l[2];
-
-    //   std::cout << size_x <<" " <<size_y << " "<<size_z << std::endl;
 
     my_grid_var_visc = new VarViscNode **[size_x];
     for (size_t x = 0; x < size_x; ++x) {
@@ -20,16 +17,11 @@ void LBodes_variable_viscosity::init_data_structure() {
             for (int z = 0; z < size_z; ++z) {
                 //get_node(x, y, z).var_visc_gamma_shear = std::numeric_limits<double>::quiet_NaN();
                 get_node(x, y, z).flag = Flag::outer;
-                get_node(x, y, z).Z_point = Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
+                get_node(x, y, z).Z_point = Vector3d{std::numeric_limits<double>::quiet_NaN(),
+                                                     std::numeric_limits<double>::quiet_NaN(),
                                                      std::numeric_limits<double>::quiet_NaN()};
-                /*  get_node(x, y, z) = VarViscNode{
-                          //my_grid_var_visc[x][y][z] =  VarViscNode{
-                          Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
-                                   std::numeric_limits<double>::quiet_NaN()}, Flag::outer};
-              }*/
             }
         }
-        //   std::cout << "end of init data structure" << std::endl;
     }
 }
 
@@ -362,9 +354,9 @@ void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &bou
             //  cout << "Bod " << "x_folded= " << Z_node_temp[0] << ", y= " << Z_node_temp[1] << " z= " << Z_node_temp[2]
             //       << " je vo vnutri bunky" << endl;
             if (actual_node.flag == Flag::outer &&
-                (std::isnan(actual_node.Z_point[0]) || !std::isnan(actual_node.Z_point[0]) && (
+                (std::isnan(actual_node.Z_point[0]) || (!std::isnan(actual_node.Z_point[0]) && (
                         (Z_point[0] - Z_node_temp[0]) <
-                        (actual_node.Z_point[0] - Z_node_temp[0])))) {
+                        (actual_node.Z_point[0] - Z_node_temp[0]))))) {
                 //ak je X rozdiel mensi, tak bude boundary, ale ak je == tak input/output
                 //to by chcelo nejako doriesit
                 markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
@@ -394,11 +386,10 @@ void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &bou
             if (cos_alpha_high >= 0) {
                 //    cout << "Bod " << "x_folded= " << Z_node_temp[0] << ", y= " << Z_node_temp[1] << " z= " << Z_node_temp[2]
                 //        << " je vo vnutri bunky" << endl;
-                if (actual_node.flag == Flag::outer && (std::isnan(actual_node.Z_point[0]) ||
-                                                        !std::isnan(actual_node.Z_point[0]) && (
-                                                                (Z_node_temp[0] - Z_point[0]) <
-                                                                (Z_node_temp[0] -
-                                                                 actual_node.Z_point[0])))) {
+                if (actual_node.flag == Flag::outer &&
+                    (std::isnan(actual_node.Z_point[0]) || (!std::isnan(actual_node.Z_point[0]) && (
+                            (Z_node_temp[0] - Z_point[0]) <
+                            (Z_node_temp[0] - actual_node.Z_point[0]))))) {
                     //ak je X rozdiel mensi, tak bude boundary, ale ak je == tak input/output
                     //to by chcelo nejako doriesit
                     markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
@@ -468,43 +459,12 @@ void LBodes_variable_viscosity::check_min_max_x_y(double &min_y, double &max_y, 
 }
 
 VarViscNode &LBodes_variable_viscosity::get_node(int x, int y, int z) {
-    //return my_grid_var_visc[x][y][z];
     size_t index = get_linear_index(x, y, z, lblattice.halo_grid);
-   // if (lbfields[index].varViscNode.flag != Flag::outer) {
-     //   std::cout << x << " " << y << " " << z << " FLAG " << lbfields[index].varViscNode.flag << std::endl;
-    //}
-    count_of_readed_nodes++;
     return lbfields[index].varViscNode;
 }
 
 void LBodes_variable_viscosity::markNode(int x, int y, int z, Vector3d Z_point, Flag flag) {
     get_node(x, y, z) = VarViscNode{Z_point, flag};
-    switch (flag) {
-        case Flag::outer :
-            count_outer++;
-            break;
-        case Flag::inner :
-            count_inner++;
-            break;
-        case Flag::boundary_flag :
-            count_boundary++;
-            break;
-        case Flag::input :
-            count_input++;
-            break;
-        case Flag::output :
-            count_output++;
-            break;
-        case Flag::input_output :
-            count_input_output++;
-            break;
-        case Flag::not_defined :
-            count_not_defined++;
-            break;
-        default:
-            break;
-    }
-    coutOfMarkedNodes++;
 }
 
 
@@ -557,7 +517,6 @@ void LBodes_variable_viscosity::update_algorithm() {
 }
 
 void LBodes_variable_viscosity::print_lbnodes_variable_visc() {
-    //printing all LB nodes with viscosity
     for (int y = 1; y < size_y; ++y) {
         for (int z = 1; z < size_z; ++z) {
             for (int x = 1; x < size_x; ++x) {

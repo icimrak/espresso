@@ -109,7 +109,6 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
     unsigned long cout_of_particles = local_cells.particles().size();
     unsigned long cout_of_traversed_particles{0};
     int coutOfBPoints{0};
-    lbodes_variable_viscosity->coutOfMarkedNodes = 0;
 
     for (auto &p : local_cells.particles()) {
         int j = 0;
@@ -226,20 +225,9 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
     MPI_Allreduce(part_area_volume, area_volume, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
 #ifdef LB_VARIABLE_VISCOSITY
-    //odtialto zavolam marking object inside ak prebieha init algoritmus
+    //marking object inside if init algorithm is in progress
     if (flagging_lbnodes_var_visc) {
         lbodes_variable_viscosity->marking_object_inside();
-       /* std::cout << coutOfBPoints << std::endl;
-        std::cout << lbodes_variable_viscosity->coutOfMarkedNodes << std::endl;
-        std::cout << "Count of readed nodes "<< lbodes_variable_viscosity->count_of_readed_nodes << std::endl;
-
-        std::cout << "count of input nodes " << lbodes_variable_viscosity->count_input << std::endl;
-        std::cout << "count of output nodes " << lbodes_variable_viscosity->count_output << std::endl;
-        std::cout << "count of input_output nodes " << lbodes_variable_viscosity->count_input_output << std::endl;
-        std::cout << "count of inner nodes " << lbodes_variable_viscosity->count_inner << std::endl;
-        std::cout << "count of outer nodes " << lbodes_variable_viscosity->count_outer << std::endl;
-        std::cout << "count of boundary nodes " << lbodes_variable_viscosity->count_boundary << std::endl;
-        std::cout << "count of not_defined nodes " << lbodes_variable_viscosity->count_not_defined << std::endl;*/
         lbodes_variable_viscosity->print_lbnodes_variable_visc();
     }
     reflagging_lbnodes_var_visc = false;
