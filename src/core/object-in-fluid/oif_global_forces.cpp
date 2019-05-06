@@ -66,14 +66,14 @@ bool reflagging_lbnodes_var_visc{false};
 
 void flag_lbnodes_variable_visc(LBodes_variable_viscosity *lbodes_variable_visc) {
     lbodes_variable_viscosity = lbodes_variable_visc;
-    lbodes_variable_viscosity->initial_algorithm();
+    lbodes_variable_viscosity->before_initial_algorithm();
     flagging_lbnodes_var_visc = true;
     update_flags_variable_visc();
 }
 
 
 void reflag_lbnodes_variable_visc() {
-    lbodes_variable_viscosity->update_algorithm();
+    lbodes_variable_viscosity->before_update_algorithm();
     reflagging_lbnodes_var_visc = true;
     flagging_lbnodes_var_visc = false;
     update_flags_variable_visc();
@@ -108,7 +108,6 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
 
     unsigned long cout_of_particles = local_cells.particles().size();
     unsigned long cout_of_traversed_particles{0};
-    int coutOfBPoints{0};
 
     for (auto &p : local_cells.particles()) {
         int j = 0;
@@ -200,7 +199,8 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
                 //budem potrebovat aj folded aj unfolded
                 Triangle triangle_unfolded{p11_unfolded, p22_unfolded, p33_unfolded};
                 Triangle triangle_folded{p11_folded, p22_folded, p33_folded};
-                lbodes_variable_viscosity->particle_from_main_loop(triangle_unfolded, triangle_folded, coutOfBPoints);
+                lbodes_variable_viscosity->particle_from_main_loop(triangle_unfolded, triangle_folded,
+                                                                   iaparams->p.oif_global_forces.inner_fluid_visc);
 #endif
 
 
@@ -232,7 +232,7 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
     }
     reflagging_lbnodes_var_visc = false;
     flagging_lbnodes_var_visc = false;
-      update_flags_variable_visc();
+    update_flags_variable_visc();
 #endif
 }
 

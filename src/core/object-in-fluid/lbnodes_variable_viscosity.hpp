@@ -25,21 +25,16 @@ using Utils::get_n_triangle;
 class LBodes_variable_viscosity {
 private:
     void init_data_structure();
-
-    Vector3d A_unfolded, B_unfolded, C_unfolded;
-    Vector3d A_folded, B_folded, C_folded;
-    Particle *p1{nullptr}, *p2{nullptr}, *p3{nullptr};
-    Bonded_ia_parameters *iaparams{nullptr};
-    VarViscNode ***my_grid_var_visc;
-
     int size_x{0};
     int size_y{0};
     int size_z{0};
 
-    double min_Py{DBL_MAX};
-    double max_Py{DBL_MIN};
-    double min_Pz{DBL_MAX};
-    double max_Pz{DBL_MIN};
+    double min_Py = std::numeric_limits<double>::max();
+    double max_Py = std::numeric_limits<double>::min();
+    double min_Pz = std::numeric_limits<double>::max();
+    double max_Pz = std::numeric_limits<double>::min();
+
+    double inner_fluid_visc{0};
 
     void reset_algorithm_parameters();
 
@@ -56,17 +51,23 @@ private:
 
     void remarkingObjectInside(int pY, int minZ, int maxZ, int minX, int maxX);
 
-    VarViscNode &get_node(int x, int y, int z);
+    LB_FluidNode &get_node(int x, int y, int z);
+
+    void initial_algorithm(Triangle &unfolded_triangle, Triangle &folded_triangle);
+
+    void update_algorithm(Triangle &unfolded_triangle, Triangle &folded_triangle);
+
+    void set_viscosity_to_node(bool is_inner, LB_FluidNode& node);
 
 public:
     bool making_initial_algorithm{false};
     bool making_update_algorithm{false};
 
-    void particle_from_main_loop(Triangle &unfolded_triangle, Triangle &folded_triangle, int &coutOfBPoints);
+    void particle_from_main_loop(Triangle &unfolded_triangle, Triangle &folded_triangle, double inner_fluid_visc);
 
-    void initial_algorithm();
+    void before_initial_algorithm();
 
-    void update_algorithm();
+    void before_update_algorithm();
 
     void print_lbnodes_variable_visc();
 
