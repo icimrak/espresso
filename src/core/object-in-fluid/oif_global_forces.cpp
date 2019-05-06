@@ -228,7 +228,7 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
     //marking object inside if init algorithm is in progress
     if (flagging_lbnodes_var_visc) {
         lbodes_variable_viscosity->marking_object_inside();
-        lbodes_variable_viscosity->print_lbnodes_variable_visc();
+       // lbodes_variable_viscosity->print_lbnodes_variable_visc(5);
     }
     reflagging_lbnodes_var_visc = false;
     flagging_lbnodes_var_visc = false;

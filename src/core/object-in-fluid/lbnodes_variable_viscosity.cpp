@@ -64,7 +64,24 @@ void LBodes_variable_viscosity::initial_algorithm(Triangle &unfolded_triangle, T
 
 
 void LBodes_variable_viscosity::update_algorithm(Triangle &unfolded_triangle, Triangle &folded_triangle) {
+    const Vector3d normal_vector = get_n_triangle(unfolded_triangle.getB(), unfolded_triangle.getC(),
+                                                  unfolded_triangle.getA()).normalize();
+    //parameter d from equation plane
+    double d = -(normal_vector[0] * unfolded_triangle.getA()[0] +
+                 normal_vector[1] * unfolded_triangle.getA()[1] +
+                 normal_vector[2] * unfolded_triangle.getA()[2]);
+    int minY = static_cast<int>(ceil(
+            std::min({unfolded_triangle.getA()[1], unfolded_triangle.getB()[1], unfolded_triangle.getC()[1]})));
+    int maxY = static_cast<int>(floor(
+            std::max({unfolded_triangle.getA()[1], unfolded_triangle.getB()[1], unfolded_triangle.getC()[1]})));
 
+    std::vector<Vector3d> boundaryPoints;
+    for (int pY = minY; pY <= maxY; ++pY) {
+        //maybe there should be folded_triangle
+        findingObjectBoundary(unfolded_triangle, pY, normal_vector, d, &boundaryPoints);
+        markingObjectBoundary_update_algorithm(boundaryPoints, normal_vector);
+        boundaryPoints.clear();
+    }
 }
 
 
@@ -370,6 +387,87 @@ void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &bou
 }
 
 
+void LBodes_variable_viscosity::markingObjectBoundary_update_algorithm(std::vector<Vector3d> &boundary_points,
+                                                                       Vector3d normal_vector) {
+    for (Vector3d Z_point : boundary_points) {
+        int x_low = static_cast<int>(floor(Z_point[0]));
+        int x_high = static_cast<int>(ceil(Z_point[0]));
+
+        if (x_high == size_x) {
+            x_high = 0;
+        }
+
+        Vector3d low_vector{x_low - Z_point[0], 0, 0};
+        Vector3d high_vector{x_high - Z_point[0], 0, 0};
+
+        double numerator_low{normal_vector[0] * low_vector[0] + normal_vector[1] * low_vector[1] +
+                             normal_vector[2] * low_vector[2]};
+        double numerator_high{normal_vector[0] * high_vector[0] + normal_vector[1] * high_vector[1] +
+                              normal_vector[2] * high_vector[2]};
+
+        //Without absolute value of numerator it is correct!!
+        double cos_alpha_low{numerator_low /
+                             sqrt(pow(normal_vector[0], 2) + pow(normal_vector[1], 2) + pow(normal_vector[2], 2)) *
+                             sqrt(pow(low_vector[0], 2) + pow(low_vector[1], 2) + pow(low_vector[2], 2))};
+        double cos_alpha_high{numerator_high /
+                              sqrt(pow(normal_vector[0], 2) + pow(normal_vector[1], 2) +
+                                   pow(normal_vector[2], 2)) *
+                              sqrt(pow(high_vector[0], 2) + pow(high_vector[1], 2) + pow(high_vector[2], 2))};
+
+        Vector3d Z_node_temp{Z_point};
+        Z_node_temp[0] = x_low;
+
+        VarViscNode actual_node = get_node((int) Z_node_temp[0], (int) Z_node_temp[1],
+                                           (int) Z_node_temp[2]).varViscNode;
+
+        if (cos_alpha_low >= 0) {
+            //Z_node_temp is inside of immersed object
+            if (std::isnan(actual_node.Z_point[0]) || (!std::isnan(actual_node.Z_point[0]) && (
+                    (Z_point[0] - Z_node_temp[0]) <=
+                    (actual_node.Z_point[0] - Z_node_temp[0])))) {
+                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, Flag::inner);
+            } else if (actual_node.flag == Flag::inner) {
+                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, Flag::inner);
+            } else {
+                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2],
+                         Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
+                                  std::numeric_limits<double>::quiet_NaN()}, Flag::outer);
+            }
+        } else {
+            //Z_node_temp is outside of immersed object
+            markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2],
+                     Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
+                              std::numeric_limits<double>::quiet_NaN()}, Flag::outer);
+        }
+        if (x_low != x_high) {
+            Z_node_temp[0] = x_high;
+            actual_node = get_node((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2]).varViscNode;
+
+            if (cos_alpha_high >= 0) {
+                //Z_node_temp is inside of immersed object
+                if (std::isnan(actual_node.Z_point[0]) || (!std::isnan(actual_node.Z_point[0]) && (
+                        (Z_node_temp[0] - Z_point[0]) <=
+                        (Z_node_temp[0] - actual_node.Z_point[0])))) {
+                    markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, Flag::inner);
+                } else if (actual_node.flag == Flag::inner) {
+                    markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, Flag::inner);
+                } else {
+                    markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2],
+                             Vector3d{std::numeric_limits<double>::quiet_NaN(),
+                                      std::numeric_limits<double>::quiet_NaN(),
+                                      std::numeric_limits<double>::quiet_NaN()}, Flag::outer);
+                }
+            } else {
+                //Z_node_temp is outside of immersed object
+                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2],
+                         Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
+                                  std::numeric_limits<double>::quiet_NaN()}, Flag::outer);
+            }
+        }
+    }
+}
+
+
 void LBodes_variable_viscosity::check_min_max_x_y(double &min_y, double &max_y, double &min_z, double &max_z,
                                                   Triangle triangle) {
     if (triangle.getA()[1] < min_y) {
@@ -439,24 +537,38 @@ void LBodes_variable_viscosity::before_initial_algorithm() {
 }
 
 void LBodes_variable_viscosity::before_update_algorithm() {
-
-    //  print_lbnodes_variable_visc();
+    print_lbnodes_variable_visc(5);
 }
 
 void LBodes_variable_viscosity::print_lbnodes_variable_visc() {
     for (int y = 0; y < size_y; ++y) {
         for (int z = 0; z < size_z; ++z) {
             for (int x = 0; x < size_x; ++x) {
-                std::cout << std::setw(5) << std::setprecision(1) << get_node(x, y, z).var_visc_gamma_shear << " ";
-            }
-            std::cout << " -> Y-" <<std::setw(3)<< y << ", Z-" <<std::setw(3)<< z << " ...... ";
-            for (int x = 0; x < size_x; ++x) {
                 std::cout << get_node(x, y, z).varViscNode.flag;
+            }
+            std::cout << " -> Y-" << std::setw(3) << y << ", Z-" << std::setw(3) << z << " ...... ";
+            for (int x = 0; x < size_x; ++x) {
+                std::cout << std::setw(5) << std::setprecision(1) << get_node(x, y, z).var_visc_gamma_shear << " ";
             }
             std::cout << std::endl;
         }
         std::cout << std::endl;
     }
+    std::cout << std::endl;
+}
+
+void LBodes_variable_viscosity::print_lbnodes_variable_visc(int y) {
+    for (int z = 0; z < size_z; ++z) {
+        for (int x = 0; x < size_x; ++x) {
+            std::cout << get_node(x, y, z).varViscNode.flag;
+        }
+        std::cout << " -> Y-" << std::setw(3) << y << ", Z-" << std::setw(3) << z << " ...... ";
+        for (int x = 0; x < size_x; ++x) {
+            std::cout << std::setw(5) << std::setprecision(1) << get_node(x, y, z).var_visc_gamma_shear << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
 }
 
 void LBodes_variable_viscosity::set_viscosity_to_node(bool is_inner, LB_FluidNode &node) {
