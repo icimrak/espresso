@@ -608,6 +608,39 @@ void lb_lbfluid_print_vtk_velocity(const std::string &filename,
   fclose(fp);
 }
 
+
+void lb_lbfluid_print_vtk_viscosity(const std::string &filename){
+#ifdef LB
+    FILE *fp = fopen(filename.c_str(), "w");
+
+    if (fp == nullptr) {
+        throw std::runtime_error("Could not open file for writing.");
+    }
+    auto const grid_size = lblattice.global_grid;
+    Vector3i position;
+
+    fprintf(fp,
+            "# vtk DataFile Version 2.0\nlbviscosity_cpu\n"
+            "ASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %d %d %d\n"
+            "ORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %d\n"
+            "SCALARS boundary int 1\nLOOKUP_TABLE default\n",
+            grid_size[0], grid_size[1], grid_size[2], lblattice.agrid[0] * 0.5,
+            lblattice.agrid[1] * 0.5, lblattice.agrid[2] * 0.5,
+            lblattice.agrid[0], lblattice.agrid[1], lblattice.agrid[2],
+            grid_size[0] * grid_size[1] * grid_size[2]);
+
+    for (position[2] = 0; position[2] < grid_size[2]; position[2]++) {
+        for (position[1] = 0; position[1] < grid_size[1]; position[1]++) {
+            for (position[0] = 0; position[0] < grid_size[0]; position[0]++) {
+                int index = get_linear_index(position[0], position[1], position[2], lblattice.halo_grid);
+                fprintf(fp, "%d \n", lbfields[index].varViscNode.flag);
+            }
+        }
+    }
+    fclose(fp);
+#endif // LB
+}
+
 void lb_lbfluid_print_boundary(const std::string &filename) {
   FILE *fp = fopen(filename.c_str(), "w");
 

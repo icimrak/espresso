@@ -221,6 +221,9 @@ cdef class HydrodynamicInteraction(Actor):
                 lb_lbfluid_print_vtk_velocity(
                     utils.to_char_pointer(path), bb1_vec, bb2_vec)
 
+        def print_vtk_viscosity(self, path):
+            lb_lbfluid_print_vtk_viscosity(utils.to_char_pointer(path))
+
         def print_vtk_boundary(self, path):
             lb_lbfluid_print_vtk_boundary(utils.to_char_pointer(path))
 

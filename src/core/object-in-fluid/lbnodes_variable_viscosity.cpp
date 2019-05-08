@@ -537,7 +537,7 @@ void LBodes_variable_viscosity::before_initial_algorithm() {
 }
 
 void LBodes_variable_viscosity::before_update_algorithm() {
-    print_lbnodes_variable_visc(5);
+   // print_lbnodes_variable_visc(3);
 }
 
 void LBodes_variable_viscosity::print_lbnodes_variable_visc() {
@@ -564,7 +564,7 @@ void LBodes_variable_viscosity::print_lbnodes_variable_visc(int y) {
         }
         std::cout << " -> Y-" << std::setw(3) << y << ", Z-" << std::setw(3) << z << " ...... ";
         for (int x = 0; x < size_x; ++x) {
-            std::cout << std::setw(5) << std::setprecision(1) << get_node(x, y, z).var_visc_gamma_shear << " ";
+          //  std::cout << std::setw(5) << std::setprecision(1) << get_node(x, y, z).var_visc_gamma_shear << " ";
         }
         std::cout << std::endl;
     }

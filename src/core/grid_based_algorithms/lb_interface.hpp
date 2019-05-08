@@ -201,6 +201,8 @@ void lb_lbfluid_print_vtk_velocity(const std::string &filename,
                                    std::vector<int> = {-1, -1, -1},
                                    std::vector<int> = {-1, -1, -1});
 
+void lb_lbfluid_print_vtk_viscosity(const std::string &filename);
+
 void lb_lbfluid_print_boundary(const std::string &filename);
 void lb_lbfluid_print_velocity(const std::string &filename);
 

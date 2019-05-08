@@ -69,6 +69,7 @@ IF LB_GPU or LB:
         double lb_lbfluid_get_bulk_viscosity() except +
         void lb_lbfluid_print_vtk_velocity(string filename) except +
         void lb_lbfluid_print_vtk_velocity(string filename, vector[int] bb1, vector[int] bb2) except +
+        void lb_lbfluid_print_vtk_viscosity(string filename) except +
         void lb_lbfluid_print_vtk_boundary(string filename) except +
         void lb_lbfluid_print_velocity(string filename) except +
         void lb_lbfluid_print_boundary(string filename) except +
