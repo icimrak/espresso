@@ -197,8 +197,16 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
 
 #ifdef LB_VARIABLE_VISCOSITY
                 //budem potrebovat aj folded aj unfolded
-                Triangle triangle_unfolded{p11_unfolded, p22_unfolded, p33_unfolded};
-                Triangle triangle_folded{p11_folded, p22_folded, p33_folded};
+                Vector3d p11_unfolded_shift{p11_unfolded[0]-0.5, p11_unfolded[1]-0.5, p11_unfolded[2]-0.5};
+                Vector3d p22_unfolded_shift{p22_unfolded[0]-0.5, p22_unfolded[1]-0.5, p22_unfolded[2]-0.5};
+                Vector3d p33_unfolded_shift{p33_unfolded[0]-0.5, p33_unfolded[1]-0.5, p33_unfolded[2]-0.5};
+
+                Vector3d p11_folded_shift{p11_folded[0]-0.5, p11_folded[1]-0.5, p11_folded[2]-0.5};
+                Vector3d p22_folded_shift{p22_folded[0]-0.5, p22_folded[1]-0.5, p22_folded[2]-0.5};
+                Vector3d p33_folded_shift{p33_folded[0]-0.5, p33_folded[1]-0.5, p33_folded[2]-0.5};
+
+                Triangle triangle_unfolded{p11_unfolded_shift, p22_unfolded_shift, p33_unfolded_shift};
+                Triangle triangle_folded{p11_folded_shift, p22_folded_shift, p33_folded_shift};
                 lbodes_variable_viscosity->particle_from_main_loop(triangle_unfolded, triangle_folded,
                                                                    iaparams->p.oif_global_forces.inner_fluid_visc);
 #endif
