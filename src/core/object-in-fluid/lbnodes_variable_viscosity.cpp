@@ -4,6 +4,7 @@
 
 #include "lbnodes_variable_viscosity.hpp"
 
+#ifdef LB_VARIABLE_VISCOSITY
 void LBodes_variable_viscosity::init_data_structure() {
     size_x = lblattice.halo_grid[0];  // size of simulation box should looks like (int) box_l[0];
     size_y = lblattice.halo_grid[1];  //(int) box_l[1];
@@ -15,13 +16,14 @@ void LBodes_variable_viscosity::init_data_structure() {
                 LB_FluidNode &node = get_node(x, y, z);
                 // initializes the variable viscosity fields, all the fields will be constant with viscosity values given by lbfluid.
                 set_viscosity_to_node(false, node);
-                node.varViscNode.flag = Flag::outer;
+                node.varViscNode.flag = LB_Node_Flag_Info::outer;
                 node.varViscNode.Z_point = Vector3d{std::numeric_limits<double>::quiet_NaN(),
                                                     std::numeric_limits<double>::quiet_NaN(),
                                                     std::numeric_limits<double>::quiet_NaN()};
             }
         }
     }
+
 }
 
 
@@ -99,15 +101,15 @@ void LBodes_variable_viscosity::markingObjectInside(int pY, int minZ, int maxZ, 
         int BN{0};
         for (int pX = minX; pX < maxX; ++pX) {
             VarViscNode U = get_node(pX, pY, pZ).varViscNode;
-            if (U.flag == Flag::boundary_flag && BN % 2 == 0) {
-                markNode(pX, pY, pZ, Vector3d{(double) pX, (double) pY, (double) pZ}, Flag::input);
+            if (U.flag == LB_Node_Flag_Info::boundary_flag && BN % 2 == 0) {
+                markNode(pX, pY, pZ, Vector3d{(double) pX, (double) pY, (double) pZ}, LB_Node_Flag_Info::input);
                 BN++;
-            } else if (U.flag != Flag::boundary_flag && BN % 2 != 0) {
-                markNode(pX, pY, pZ, Vector3d{(double) pX, (double) pY, (double) pZ}, Flag::inner);
-            } else if (U.flag == Flag::boundary_flag && BN % 2 != 0) {
-                markNode(pX, pY, pZ, Vector3d{(double) pX, (double) pY, (double) pZ}, Flag::output);
+            } else if (U.flag != LB_Node_Flag_Info::boundary_flag && BN % 2 != 0) {
+                markNode(pX, pY, pZ, Vector3d{(double) pX, (double) pY, (double) pZ}, LB_Node_Flag_Info::inner);
+            } else if (U.flag == LB_Node_Flag_Info::boundary_flag && BN % 2 != 0) {
+                markNode(pX, pY, pZ, Vector3d{(double) pX, (double) pY, (double) pZ}, LB_Node_Flag_Info::output);
                 BN++;
-            } else if (U.flag == Flag::input_output && BN % 2 == 0) {
+            } else if (U.flag == LB_Node_Flag_Info::input_output && BN % 2 == 0) {
                 BN += 2;
             }
             /*TODO
@@ -122,14 +124,14 @@ void LBodes_variable_viscosity::remarkingObjectInside(int pY, int minZ, int maxZ
     for (int pZ = minZ; pZ <= maxZ; ++pZ) {
         for (int pX = minX; pX < maxX; ++pX) {
             VarViscNode U = get_node(pX, pY, pZ).varViscNode;
-            if (U.flag != Flag::outer) {
+            if (U.flag != LB_Node_Flag_Info::outer) {
                 markNode(pX, pY, pZ,
                          Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
-                                  std::numeric_limits<double>::quiet_NaN()}, Flag::inner);
+                                  std::numeric_limits<double>::quiet_NaN()}, LB_Node_Flag_Info::inner);
             } else {
                 markNode(pX, pY, pZ,
                          Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
-                                  std::numeric_limits<double>::quiet_NaN()}, Flag::outer);
+                                  std::numeric_limits<double>::quiet_NaN()}, LB_Node_Flag_Info::outer);
             }
         }
     }
@@ -138,154 +140,154 @@ void LBodes_variable_viscosity::remarkingObjectInside(int pY, int minZ, int maxZ
 void LBodes_variable_viscosity::findingObjectBoundary(Triangle triangle, int pY, Vector3d normal_vector, double d,
                                                       std::vector<Vector3d> *boundaryPoints) {
     int count_NAN{0};
-    //variables, that indicate that segment is crossed or cut
-    bool cuts_A = false;
-    bool cuts_B = false;
-    bool cuts_C = false;
+//variables, that indicate that segment is crossed or cut
+bool cuts_A = false;
+bool cuts_B = false;
+bool cuts_C = false;
 
-    //I need to find out position P1 and P2
-    std::vector<Vector3d> P_points;
+//I need to find out position P1 and P2
+std::vector<Vector3d> P_points;
 
-    double t_AB = (pY - triangle.getA()[1]) / (triangle.getB()[1] - triangle.getA()[1]);
-    if (triangle.getB()[1] - triangle.getA()[1] == 0.000000 && (t_AB == 0 || t_AB == 1)) {
-        count_NAN++;
-    }
-    double t_BC = (pY - triangle.getB()[1]) / (triangle.getC()[1] - triangle.getB()[1]);
-    if (triangle.getC()[1] - triangle.getB()[1] == 0.000000 && (t_BC == 0 || t_BC == 1)) {
-        count_NAN++;
-    }
-    double t_AC = (pY - triangle.getA()[1]) / (triangle.getC()[1] - triangle.getA()[1]);
-    if (triangle.getC()[1] - triangle.getA()[1] == 0.000000 && (t_AC == 0 || t_AC == 1)) {
-        count_NAN++;
-    }
+double t_AB = (pY - triangle.getA()[1]) / (triangle.getB()[1] - triangle.getA()[1]);
+if (triangle.getB()[1] - triangle.getA()[1] == 0.000000 && (t_AB == 0 || t_AB == 1)) {
+    count_NAN++;
+}
+double t_BC = (pY - triangle.getB()[1]) / (triangle.getC()[1] - triangle.getB()[1]);
+if (triangle.getC()[1] - triangle.getB()[1] == 0.000000 && (t_BC == 0 || t_BC == 1)) {
+    count_NAN++;
+}
+double t_AC = (pY - triangle.getA()[1]) / (triangle.getC()[1] - triangle.getA()[1]);
+if (triangle.getC()[1] - triangle.getA()[1] == 0.000000 && (t_AC == 0 || t_AC == 1)) {
+    count_NAN++;
+}
 
-    switch (count_NAN) {
-        case 1:
-            //When count_NAN==1 then only one edge of triangle cross the current plane pY
-            if (t_AB == 0) {
-                P_points.push_back(triangle.getA());
-            } else if (t_AB == 1) {
-                P_points.push_back(triangle.getB());
-            }
-            if (t_BC == 0) {
-                P_points.push_back(triangle.getB());
-            } else if (t_BC == 1) {
-                P_points.push_back(triangle.getC());
-            }
-            if (t_AC == 0) {
-                P_points.push_back(triangle.getA());
-            } else if (t_AC == 1) {
-                P_points.push_back(triangle.getC());
-            }
-            goto Process_Boundary_points;
-        case 2:
-            runtimeErrorMsg() << "Error, because 2 edges cannot lie on that plane\n";
-            break;
-        case 3:
-            //When count_NAN==1 then whole triangle cross the current plane pY
+switch (count_NAN) {
+    case 1:
+        //When count_NAN==1 then only one edge of triangle cross the current plane pY
+        if (t_AB == 0) {
             P_points.push_back(triangle.getA());
+        } else if (t_AB == 1) {
             P_points.push_back(triangle.getB());
+        }
+        if (t_BC == 0) {
+            P_points.push_back(triangle.getB());
+        } else if (t_BC == 1) {
             P_points.push_back(triangle.getC());
-            break;
-        default:
-            break;
-    };
-
-    //If is any edge cut or crossed
-    if (t_AB >= 0 && t_AB <= 1) {
-        double pZ = triangle.getA()[2] + t_AB * (triangle.getB()[2] - triangle.getA()[2]);
-        double pX = triangle.getA()[0] + t_AB * (triangle.getB()[0] - triangle.getA()[0]);
-        if (t_AB == 1) {
-            cuts_B = true;
-        } else if (t_AB == 0) {
-            cuts_A = true;
         }
-        P_points.push_back(Vector3d{pX, (double) pY, pZ});
+        if (t_AC == 0) {
+            P_points.push_back(triangle.getA());
+        } else if (t_AC == 1) {
+            P_points.push_back(triangle.getC());
+        }
+        goto Process_Boundary_points;
+    case 2:
+        runtimeErrorMsg() << "Error, because 2 edges cannot lie on that plane\n";
+        break;
+    case 3:
+        //When count_NAN==1 then whole triangle cross the current plane pY
+        P_points.push_back(triangle.getA());
+        P_points.push_back(triangle.getB());
+        P_points.push_back(triangle.getC());
+        break;
+    default:
+        break;
+};
+
+//If is any edge cut or crossed
+if (t_AB >= 0 && t_AB <= 1) {
+    double pZ = triangle.getA()[2] + t_AB * (triangle.getB()[2] - triangle.getA()[2]);
+    double pX = triangle.getA()[0] + t_AB * (triangle.getB()[0] - triangle.getA()[0]);
+    if (t_AB == 1) {
+        cuts_B = true;
+    } else if (t_AB == 0) {
+        cuts_A = true;
     }
-    if (t_BC >= 0 && t_BC <= 1) {
-        double pZ = triangle.getB()[2] + t_BC * (triangle.getC()[2] - triangle.getB()[2]);
-        double pX = triangle.getB()[0] + t_BC * (triangle.getC()[0] - triangle.getB()[0]);
-        if (t_BC == 1) {
-            cuts_C = true;
+    P_points.push_back(Vector3d{pX, (double) pY, pZ});
+}
+if (t_BC >= 0 && t_BC <= 1) {
+    double pZ = triangle.getB()[2] + t_BC * (triangle.getC()[2] - triangle.getB()[2]);
+    double pX = triangle.getB()[0] + t_BC * (triangle.getC()[0] - triangle.getB()[0]);
+    if (t_BC == 1) {
+        cuts_C = true;
+        P_points.push_back(Vector3d{pX, (double) pY, pZ});
+        goto Intersection_of_AC;
+    } else if (t_BC == 0 && !cuts_B) {
+        P_points.push_back(Vector3d{pX, (double) pY, pZ});
+        goto Intersection_of_AC;
+    }
+    P_points.push_back(Vector3d{pX, (double) pY, pZ});
+}
+
+Intersection_of_AC:
+if (t_AC >= 0 && t_AC <= 1) {
+    double pZ = triangle.getA()[2] + t_AC * (triangle.getC()[2] - triangle.getA()[2]);
+    double pX = triangle.getA()[0] + t_AC * (triangle.getC()[0] - triangle.getA()[0]);
+    if (t_AC == 1) {
+        if (!cuts_C) {
             P_points.push_back(Vector3d{pX, (double) pY, pZ});
-            goto Intersection_of_AC;
-        } else if (t_BC == 0 && !cuts_B) {
+        }
+        goto Process_Boundary_points;
+    } else if (t_AC == 0) {
+        if (!cuts_A) {
             P_points.push_back(Vector3d{pX, (double) pY, pZ});
-            goto Intersection_of_AC;
         }
-        P_points.push_back(Vector3d{pX, (double) pY, pZ});
+        goto Process_Boundary_points;
     }
+    P_points.push_back(Vector3d{pX, (double) pY, pZ});
+}
 
-    Intersection_of_AC:
-    if (t_AC >= 0 && t_AC <= 1) {
-        double pZ = triangle.getA()[2] + t_AC * (triangle.getC()[2] - triangle.getA()[2]);
-        double pX = triangle.getA()[0] + t_AC * (triangle.getC()[0] - triangle.getA()[0]);
-        if (t_AC == 1) {
-            if (!cuts_C) {
-                P_points.push_back(Vector3d{pX, (double) pY, pZ});
-            }
-            goto Process_Boundary_points;
-        } else if (t_AC == 0) {
-            if (!cuts_A) {
-                P_points.push_back(Vector3d{pX, (double) pY, pZ});
-            }
-            goto Process_Boundary_points;
-        }
-        P_points.push_back(Vector3d{pX, (double) pY, pZ});
-    }
+//Rounding Z-coordinate and compute X-coordinate
+Process_Boundary_points:
+double z_min, z_max;
 
-    //Rounding Z-coordinate and compute X-coordinate
-    Process_Boundary_points:
-    double z_min, z_max;
-
-    switch (P_points.size()) {
-        case 2:
-            //The intersection consists from 2 points
-            if (P_points.at(0)[2] > P_points.at(1)[2]) {
-                z_max = P_points.at(0)[2];
-                z_min = P_points.at(1)[2];
-            } else {
-                z_min = P_points.at(0)[2];
-                z_max = P_points.at(1)[2];
-            }
-            //If Z is integer
-            if (floor(z_max) - ceil(z_min) >= 0) {
-                int z_hlp = static_cast<int>(ceil(z_min));
-                while (z_hlp <= floor(z_max)) {
-                    //TODO Here should be zero division!!!!!
-                    double x = -((normal_vector[1] * pY) + (normal_vector[2] * z_hlp) + d) / normal_vector[0];
-                    boundaryPoints->push_back(Vector3d{x, (double) pY, (double) z_hlp});
-                    z_hlp++;
-                }
-            }
-            break;
-        case 1:
-            //The intersection consists from 1 point only
+switch (P_points.size()) {
+    case 2:
+        //The intersection consists from 2 points
+        if (P_points.at(0)[2] > P_points.at(1)[2]) {
             z_max = P_points.at(0)[2];
+            z_min = P_points.at(1)[2];
+        } else {
             z_min = P_points.at(0)[2];
-            //If Z is integer
-            if (floor(z_max) - ceil(z_min) >= 0) {
-                int z_hlp = static_cast<int>(ceil(z_min));
-                while (z_hlp <= floor(z_max)) {
-                    //TODO Here should be zero division!!!!!
-                    double x = -((normal_vector[1] * pY) + (normal_vector[2] * z_hlp) + d) / normal_vector[0];
-                    boundaryPoints->push_back(Vector3d{x, (double) pY, (double) z_hlp});
-                    z_hlp++;
-                }
+            z_max = P_points.at(1)[2];
+        }
+        //If Z is integer
+        if (floor(z_max) - ceil(z_min) >= 0) {
+            int z_hlp = static_cast<int>(ceil(z_min));
+            while (z_hlp <= floor(z_max)) {
+                //TODO Here should be zero division!!!!!
+                double x = -((normal_vector[1] * pY) + (normal_vector[2] * z_hlp) + d) / normal_vector[0];
+                boundaryPoints->push_back(Vector3d{x, (double) pY, (double) z_hlp});
+                z_hlp++;
             }
-            break;
-        case 3:
-            /*TODO
-             * The intersection consists from 3 points
-             * This part, when node is not_defined is not implemented yet
-             * when whole area from triangle is crossed by plane
-             */
-            runtimeErrorMsg() << "The whole area from triangle is crossed by plane. It is not implemented yet.\n";
-            break;
-        default:
-            runtimeErrorMsg() << "For pY=" << pY << " not found the intersection, but it should! " << P_points.size();
-            break;
-    }
+        }
+        break;
+    case 1:
+        //The intersection consists from 1 point only
+        z_max = P_points.at(0)[2];
+        z_min = P_points.at(0)[2];
+        //If Z is integer
+        if (floor(z_max) - ceil(z_min) >= 0) {
+            int z_hlp = static_cast<int>(ceil(z_min));
+            while (z_hlp <= floor(z_max)) {
+                //TODO Here should be zero division!!!!!
+                double x = -((normal_vector[1] * pY) + (normal_vector[2] * z_hlp) + d) / normal_vector[0];
+                boundaryPoints->push_back(Vector3d{x, (double) pY, (double) z_hlp});
+                z_hlp++;
+            }
+        }
+        break;
+    case 3:
+        /*TODO
+         * The intersection consists from 3 points
+         * This part, when node is not_defined is not implemented yet
+         * when whole area from triangle is crossed by plane
+         */
+        runtimeErrorMsg() << "The whole area from triangle is crossed by plane. It is not implemented yet.\n";
+        break;
+    default:
+        runtimeErrorMsg() << "For pY=" << pY << " not found the intersection, but it should! " << P_points.size();
+        break;
+}
 }
 
 void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &boundary_points, Vector3d normal_vector) {
@@ -322,7 +324,7 @@ void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &bou
 
         if (cos_alpha_low >= 0) {
             //Z_node_temp is inside of immersed object
-            if (actual_node.flag == Flag::outer &&
+            if (actual_node.flag == LB_Node_Flag_Info::outer &&
                 (std::isnan(actual_node.Z_point[0]) || (!std::isnan(actual_node.Z_point[0]) && (
                         (Z_point[0] - Z_node_temp[0]) <
                         (actual_node.Z_point[0] - Z_node_temp[0]))))) {
@@ -331,23 +333,23 @@ void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &bou
                  * to by chcelo nejako doriesit
                 */
                 markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
-                         Flag::boundary_flag);
-            } else if (actual_node.flag == Flag::boundary_flag) {
+                         LB_Node_Flag_Info::boundary_flag);
+            } else if (actual_node.flag == LB_Node_Flag_Info::boundary_flag) {
                 if (actual_node.Z_point[0] != Z_point[0]) {
                     markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
-                             Flag::input_output);
+                             LB_Node_Flag_Info::input_output);
                 } else {
                     markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
-                             Flag::boundary_flag);
+                             LB_Node_Flag_Info::boundary_flag);
                 }
             } else {
                 markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
-                         Flag::outer);
+                         LB_Node_Flag_Info::outer);
             }
         } else {
             //Z_node_temp is outside of immersed object
             markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
-                     Flag::outer);
+                     LB_Node_Flag_Info::outer);
         }
         if (x_low != x_high) {
             Z_node_temp[0] = x_high;
@@ -355,7 +357,7 @@ void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &bou
 
             if (cos_alpha_high >= 0) {
                 //Z_node_temp is inside of immersed object
-                if (actual_node.flag == Flag::outer &&
+                if (actual_node.flag == LB_Node_Flag_Info::outer &&
                     (std::isnan(actual_node.Z_point[0]) || (!std::isnan(actual_node.Z_point[0]) && (
                             (Z_node_temp[0] - Z_point[0]) <
                             (Z_node_temp[0] - actual_node.Z_point[0]))))) {
@@ -364,23 +366,23 @@ void LBodes_variable_viscosity::markingObjectBoundary(std::vector<Vector3d> &bou
                      * to by chcelo nejako doriesit
                     */
                     markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
-                             Flag::boundary_flag);
-                } else if (actual_node.flag == Flag::boundary_flag) {
+                             LB_Node_Flag_Info::boundary_flag);
+                } else if (actual_node.flag == LB_Node_Flag_Info::boundary_flag) {
                     if (actual_node.Z_point[0] != Z_point[0]) {
                         markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
-                                 Flag::input_output);
+                                 LB_Node_Flag_Info::input_output);
                     } else {
                         markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
-                                 Flag::boundary_flag);
+                                 LB_Node_Flag_Info::boundary_flag);
                     }
                 } else {
                     markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
-                             Flag::outer);
+                             LB_Node_Flag_Info::outer);
                 }
             } else {
                 //Z_node_temp is outside of immersed object
                 markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point,
-                         Flag::outer);
+                         LB_Node_Flag_Info::outer);
             }
         }
     }
@@ -425,19 +427,19 @@ void LBodes_variable_viscosity::markingObjectBoundary_update_algorithm(std::vect
             if (std::isnan(actual_node.Z_point[0]) || (!std::isnan(actual_node.Z_point[0]) && (
                     (Z_point[0] - Z_node_temp[0]) <=
                     (actual_node.Z_point[0] - Z_node_temp[0])))) {
-                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, Flag::inner);
-            } else if (actual_node.flag == Flag::inner) {
-                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, Flag::inner);
+                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, LB_Node_Flag_Info::inner);
+            } else if (actual_node.flag == LB_Node_Flag_Info::inner) {
+                markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, LB_Node_Flag_Info::inner);
             } else {
                 markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2],
                          Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
-                                  std::numeric_limits<double>::quiet_NaN()}, Flag::outer);
+                                  std::numeric_limits<double>::quiet_NaN()}, LB_Node_Flag_Info::outer);
             }
         } else {
             //Z_node_temp is outside of immersed object
             markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2],
                      Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
-                              std::numeric_limits<double>::quiet_NaN()}, Flag::outer);
+                              std::numeric_limits<double>::quiet_NaN()}, LB_Node_Flag_Info::outer);
         }
         if (x_low != x_high) {
             Z_node_temp[0] = x_high;
@@ -448,20 +450,20 @@ void LBodes_variable_viscosity::markingObjectBoundary_update_algorithm(std::vect
                 if (std::isnan(actual_node.Z_point[0]) || (!std::isnan(actual_node.Z_point[0]) && (
                         (Z_node_temp[0] - Z_point[0]) <=
                         (Z_node_temp[0] - actual_node.Z_point[0])))) {
-                    markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, Flag::inner);
-                } else if (actual_node.flag == Flag::inner) {
-                    markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, Flag::inner);
+                    markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, LB_Node_Flag_Info::inner);
+                } else if (actual_node.flag == LB_Node_Flag_Info::inner) {
+                    markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2], Z_point, LB_Node_Flag_Info::inner);
                 } else {
                     markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2],
                              Vector3d{std::numeric_limits<double>::quiet_NaN(),
                                       std::numeric_limits<double>::quiet_NaN(),
-                                      std::numeric_limits<double>::quiet_NaN()}, Flag::outer);
+                                      std::numeric_limits<double>::quiet_NaN()}, LB_Node_Flag_Info::outer);
                 }
             } else {
                 //Z_node_temp is outside of immersed object
                 markNode((int) Z_node_temp[0], (int) Z_node_temp[1], (int) Z_node_temp[2],
                          Vector3d{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(),
-                                  std::numeric_limits<double>::quiet_NaN()}, Flag::outer);
+                                  std::numeric_limits<double>::quiet_NaN()}, LB_Node_Flag_Info::outer);
             }
         }
     }
@@ -515,12 +517,12 @@ LB_FluidNode &LBodes_variable_viscosity::get_node(int x, int y, int z) {
     return lbfields[index];
 }
 
-void LBodes_variable_viscosity::markNode(int x, int y, int z, Vector3d Z_point, Flag flag) {
+void LBodes_variable_viscosity::markNode(int x, int y, int z, Vector3d Z_point, LB_Node_Flag_Info flag) {
     LB_FluidNode &node = get_node(x, y, z);
 
     //I will also store Z_point, because I can see which Particle marked my given node
     node.varViscNode = VarViscNode{Z_point, flag};
-    set_viscosity_to_node(flag == Flag::inner, node);
+    set_viscosity_to_node(flag == LB_Node_Flag_Info::inner, node);
 }
 
 
@@ -537,7 +539,7 @@ void LBodes_variable_viscosity::before_initial_algorithm() {
 }
 
 void LBodes_variable_viscosity::before_update_algorithm() {
-   // print_lbnodes_variable_visc(3);
+    // print_lbnodes_variable_visc(3);
 }
 
 void LBodes_variable_viscosity::print_lbnodes_variable_visc() {
@@ -578,3 +580,4 @@ void LBodes_variable_viscosity::set_viscosity_to_node(bool is_inner, LB_FluidNod
         node.var_visc_gamma_shear = 1. - 2. / (6. * lbpar.viscosity * lbpar.tau / (lbpar.agrid * lbpar.agrid) + 1.);
     }
 }
+#endif // LB_VARIABLE_VISCOSITY

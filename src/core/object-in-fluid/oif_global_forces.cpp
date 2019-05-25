@@ -84,7 +84,7 @@ void update_flags_variable_visc() {
     lbodes_variable_viscosity->making_update_algorithm = reflagging_lbnodes_var_visc;
 }
 
-#endif
+#endif //LB_VARIABLE_VISCOSITY
 
 
 void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-same approach

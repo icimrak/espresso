@@ -97,13 +97,13 @@ template <size_t N_vel = 19> struct LB_Model {
 
 
 #ifdef LB_VARIABLE_VISCOSITY
-enum Flag {
+enum LB_Node_Flag_Info {
     outer, boundary_flag, input, inner, output, input_output, not_defined
 };
 
 struct VarViscNode {
     Vector3d Z_point;
-    Flag flag;
+    LB_Node_Flag_Info flag;
 };
 #endif
 

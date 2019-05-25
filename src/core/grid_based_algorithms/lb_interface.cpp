@@ -611,6 +611,7 @@ void lb_lbfluid_print_vtk_velocity(const std::string &filename,
 
 void lb_lbfluid_print_vtk_viscosity(const std::string &filename){
 #ifdef LB
+#ifdef LB_VARIABLE_VISCOSITY
     FILE *fp = fopen(filename.c_str(), "w");
 
     if (fp == nullptr) {
@@ -638,6 +639,7 @@ void lb_lbfluid_print_vtk_viscosity(const std::string &filename){
         }
     }
     fclose(fp);
+#endif //LB_VARIABLE_VISCOSITY
 #endif // LB
 }
 

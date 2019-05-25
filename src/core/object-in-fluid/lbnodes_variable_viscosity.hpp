@@ -23,59 +23,62 @@
 using Utils::get_n_triangle;
 
 class LBodes_variable_viscosity {
-private:
-    void init_data_structure();
-    int size_x{0};
-    int size_y{0};
-    int size_z{0};
+#ifdef LB_VARIABLE_VISCOSITY
+    private:
+        void init_data_structure();
 
-    double min_Py = std::numeric_limits<double>::max();
-    double max_Py = std::numeric_limits<double>::min();
-    double min_Pz = std::numeric_limits<double>::max();
-    double max_Pz = std::numeric_limits<double>::min();
+        int size_x{0};
+        int size_y{0};
+        int size_z{0};
 
-    double inner_fluid_visc{0};
+        double min_Py = std::numeric_limits<double>::max();
+        double max_Py = std::numeric_limits<double>::min();
+        double min_Pz = std::numeric_limits<double>::max();
+        double max_Pz = std::numeric_limits<double>::min();
 
-    void reset_algorithm_parameters();
+        double inner_fluid_visc{0};
 
-    void check_min_max_x_y(double &min_y, double &max_y, double &min_z, double &max_z, Triangle triangle);
+        void reset_algorithm_parameters();
 
-    void findingObjectBoundary(Triangle triangle, int pY, Vector3d normal_vector, double d,
-                               std::vector<Vector3d> *boundaryPoints);
+        void check_min_max_x_y(double &min_y, double &max_y, double &min_z, double &max_z, Triangle triangle);
 
-    void markingObjectBoundary(std::vector<Vector3d> &boundary_points, Vector3d normal_vector);
+        void findingObjectBoundary(Triangle triangle, int pY, Vector3d normal_vector, double d,
+                                   std::vector<Vector3d> *boundaryPoints);
 
-    void markingObjectBoundary_update_algorithm(std::vector<Vector3d> &boundary_points, Vector3d normal_vector);
+        void markingObjectBoundary(std::vector<Vector3d> &boundary_points, Vector3d normal_vector);
 
-    void markNode(int x, int y, int z, Vector3d Z_point, Flag flag);
+        void markingObjectBoundary_update_algorithm(std::vector<Vector3d> &boundary_points, Vector3d normal_vector);
 
-    void markingObjectInside(int pY, int minZ, int maxZ, int minX, int maxX);
+        void markNode(int x, int y, int z, Vector3d Z_point, LB_Node_Flag_Info flag);
 
-    void remarkingObjectInside(int pY, int minZ, int maxZ, int minX, int maxX);
+        void markingObjectInside(int pY, int minZ, int maxZ, int minX, int maxX);
 
-    LB_FluidNode &get_node(int x, int y, int z);
+        void remarkingObjectInside(int pY, int minZ, int maxZ, int minX, int maxX);
 
-    void initial_algorithm(Triangle &unfolded_triangle, Triangle &folded_triangle);
+        LB_FluidNode &get_node(int x, int y, int z);
 
-    void update_algorithm(Triangle &unfolded_triangle, Triangle &folded_triangle);
+        void initial_algorithm(Triangle &unfolded_triangle, Triangle &folded_triangle);
 
-    void set_viscosity_to_node(bool is_inner, LB_FluidNode& node);
+        void update_algorithm(Triangle &unfolded_triangle, Triangle &folded_triangle);
 
-public:
-    bool making_initial_algorithm{false};
-    bool making_update_algorithm{false};
+        void set_viscosity_to_node(bool is_inner, LB_FluidNode &node);
 
-    void particle_from_main_loop(Triangle &unfolded_triangle, Triangle &folded_triangle, double inner_fluid_visc);
+    public:
+        bool making_initial_algorithm{false};
+        bool making_update_algorithm{false};
 
-    void before_initial_algorithm();
+        void particle_from_main_loop(Triangle &unfolded_triangle, Triangle &folded_triangle, double inner_fluid_visc);
 
-    void before_update_algorithm();
+        void before_initial_algorithm();
 
-    void print_lbnodes_variable_visc();
+        void before_update_algorithm();
 
-    void print_lbnodes_variable_visc(int y);
+        void print_lbnodes_variable_visc();
 
-    void marking_object_inside();
+        void print_lbnodes_variable_visc(int y);
+
+        void marking_object_inside();
+#endif //LB_VARIABLE_VISCOSITY
 };
 
 
