@@ -24,17 +24,23 @@
  */
 
 #include "oif_global_forces.hpp"
-#include "../../../build/myconfig.hpp"
+#include "communication.hpp"
+#include "errorhandling.hpp"
+#include "grid.hpp"
+#include "grid_based_algorithms/lb_interface.hpp"
+#include "particle_data.hpp"
+
+
 
 /** set parameters for the OIF_GLOBAL_FORCES potential.
  */
 int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g,
                                  double V0, double kv, double inner_fluid_visc) {
-    if (bond_type < 0)
+    if (bond_type < 0) {
         return ES_ERROR;
+    }
 
     make_bond_type_exist(bond_type);
-
     bonded_ia_params[bond_type].p.oif_global_forces.ka_g = ka_g;
     bonded_ia_params[bond_type].p.oif_global_forces.A0_g = A0_g;
     bonded_ia_params[bond_type].p.oif_global_forces.V0 = V0;
@@ -96,8 +102,8 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
 
     /* loop over particles */
     Particle *p1, *p2, *p3;
-    Vector3d p11_unfolded, p22_unfolded, p33_unfolded;
-    Vector3d p11_folded, p22_folded, p33_folded;
+    Utils::Vector3d p11_unfolded, p22_unfolded, p33_unfolded;
+    Utils::Vector3d p11_folded, p22_folded, p33_folded;
     int img[3];
     double AA[3], BB[3];
     Bonded_ia_parameters *iaparams;
@@ -197,13 +203,13 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
 
 #ifdef LB_VARIABLE_VISCOSITY
                 //budem potrebovat aj folded aj unfolded
-                Vector3d p11_unfolded_shift{p11_unfolded[0]-0.5, p11_unfolded[1]-0.5, p11_unfolded[2]-0.5};
-                Vector3d p22_unfolded_shift{p22_unfolded[0]-0.5, p22_unfolded[1]-0.5, p22_unfolded[2]-0.5};
-                Vector3d p33_unfolded_shift{p33_unfolded[0]-0.5, p33_unfolded[1]-0.5, p33_unfolded[2]-0.5};
+                Utils::Vector3d p11_unfolded_shift{p11_unfolded[0]-0.5, p11_unfolded[1]-0.5, p11_unfolded[2]-0.5};
+                Utils::Vector3d p22_unfolded_shift{p22_unfolded[0]-0.5, p22_unfolded[1]-0.5, p22_unfolded[2]-0.5};
+                Utils::Vector3d p33_unfolded_shift{p33_unfolded[0]-0.5, p33_unfolded[1]-0.5, p33_unfolded[2]-0.5};
 
-                Vector3d p11_folded_shift{p11_folded[0]-0.5, p11_folded[1]-0.5, p11_folded[2]-0.5};
-                Vector3d p22_folded_shift{p22_folded[0]-0.5, p22_folded[1]-0.5, p22_folded[2]-0.5};
-                Vector3d p33_folded_shift{p33_folded[0]-0.5, p33_folded[1]-0.5, p33_folded[2]-0.5};
+                Utils::Vector3d p11_folded_shift{p11_folded[0]-0.5, p11_folded[1]-0.5, p11_folded[2]-0.5};
+                Utils::Vector3d p22_folded_shift{p22_folded[0]-0.5, p22_folded[1]-0.5, p22_folded[2]-0.5};
+                Utils::Vector3d p33_folded_shift{p33_folded[0]-0.5, p33_folded[1]-0.5, p33_folded[2]-0.5};
 
                 Triangle triangle_unfolded{p11_unfolded_shift, p22_unfolded_shift, p33_unfolded_shift};
                 Triangle triangle_folded{p11_folded_shift, p22_folded_shift, p33_folded_shift};
@@ -331,55 +337,4 @@ void add_oif_global_forces(double *area_volume, int molType) { // first-fold-the
     }
 }
 
-
-//maybe future refactoring :)
-bool calc_vectors_of_triangles(Particle &p, Vector3d &p11, Vector3d &p22, Vector3d &p33, Particle *p1, Particle *p2,
-                               Particle *p3, int molType, Bonded_ia_parameters *iaparams, int test) {
-    int j = 0;
-    p1 = &p;
-    while (j < p1->bl.n) {
-        // bond type
-        auto const type_num = p1->bl.e[j++];
-        iaparams = &bonded_ia_params[type_num];
-        auto const type = iaparams->type;
-        auto const n_partners = iaparams->num;
-        auto const id = p1->p.mol_id;
-        if (type == BONDED_IA_OIF_GLOBAL_FORCES && id == molType) { // BONDED_IA_OIF_GLOBAL_FORCES with correct molType
-            test++;
-            // fetch particle 2
-            p2 = local_particles[p1->bl.e[j++]];
-            if (!p2) {
-                runtimeErrorMsg() << "add area: bond broken between particles "
-                                  << p1->p.identity << " and " << p1->bl.e[j - 1]
-                                  << " (particles not stored on the same node - "
-                                     "oif_globalforce2); n "
-                                  << p1->bl.n << " max " << p1->bl.max;
-                return false;
-            }
-            // fetch particle 3
-            // if(n_partners>2){
-            p3 = local_particles[p1->bl.e[j++]];
-            if (!p3) {
-                runtimeErrorMsg()
-                        << "add area: bond broken between particles " << p1->p.identity
-                        << ", " << p1->bl.e[j - 2] << " and " << p1->bl.e[j - 1]
-                        << " (particles not stored on the same node); n " << p1->bl.n
-                        << " max " << p1->bl.max;
-                return false;
-            }
-
-            p11 = unfolded_position(*p1);
-            p22 = p11 + get_mi_vector(p2->r.p, p11);
-            p33 = p11 + get_mi_vector(p3->r.p, p11);
-            printf("naslo mi to \n");
-            return true;
-        } else {
-            j += n_partners;
-        }
-    }
-    return false;
-}
-
-
 int max_oif_objects = 0;
-bool oif_objects_up_to_date = false;

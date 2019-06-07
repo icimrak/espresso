@@ -11,15 +11,15 @@
 
 class Triangle {
 private:
-    Vector3d A, B, C;
+    Utils::Vector3d A, B, C;
 public:
-    Triangle(Vector3d A, Vector3d B, Vector3d C);
+    Triangle(Utils::Vector3d A, Utils::Vector3d B, Utils::Vector3d C);
 
-    Vector3d getA();
+    Utils::Vector3d getA();
 
-    Vector3d getB();
+    Utils::Vector3d getB();
 
-    Vector3d getC();
+    Utils::Vector3d getC();
 
 };
 

@@ -112,8 +112,6 @@ class ObservableProfileLBCommon(object):
             obs.calculate()
 
 
-@ut.skipIf(not espressomd.has_features(
-    'LB'), "Skipping test due to missing features.")
 class LBCPU(ut.TestCase, ObservableProfileLBCommon):
 
     """Test for the CPU implementation of the LB."""
@@ -124,8 +122,8 @@ class LBCPU(ut.TestCase, ObservableProfileLBCommon):
         self.system.actors.add(self.lbf)
 
 
-@ut.skipIf(not espressomd.has_features(
-    'LB_GPU'), "Skipping test due to missing features.")
+@ut.skipIf(not espressomd.gpu_available() or not espressomd.has_features(
+    'CUDA'), "Skipping test due to missing features or gpu.")
 class LBGPU(ut.TestCase, ObservableProfileLBCommon):
 
     """Test for the GPU implementation of the LB."""

@@ -161,10 +161,10 @@ with the reaction rate :math:`k_{\mathrm{ct}}` and the simulation time step :mat
 
 Self-propulsion is achieved by imposing an interaction asymmetry between the partners of a swapped pair. That is, the heterogeneous distribution of chemical species induced by the swapping leads to a net force on the particle, counter balanced by friction.
 
-To set up the system for catalytic reactions the class :class:`espressomd.reaction.Reaction`
+To set up the system for catalytic reactions the class :class:`espressomd.swimmer_reaction.Reaction`
 can be used. ::
 
-    from espressomd.reaction import Reaction
+    from espressomd.swimmer_reaction import Reaction
 
     system = espressomd.System()
 
@@ -1451,7 +1451,7 @@ Initialization
         stencil='linkcentered', advection=True, fluid_coupling='friction')
     sys.actors.add(ek)
 
-.. note:: Features ``ELECTROKINETICS`` and ``LB_GPU`` required
+.. note:: Features ``ELECTROKINETICS`` and ``CUDA`` required
 
 The above is a minimal example how to initialize the LB fluid, and
 it is very similar to the lattice Boltzmann command in set-up. We
@@ -1527,13 +1527,16 @@ valency of the particles of that species ``valency``, and an optional external
 before, the LB density is completely decoupled from the electrokinetic
 densities. This has the advantage that greater freedom can be achieved
 in matching the internal parameters to an experimental system. Moreover,
-it is possible to choose parameters for which the LB is more stable. The species has to be added to a LB fluid::
+it is possible to choose parameters for which the LB is more stable. The species can be added to a LB fluid::
 
     ek.add_species(species)
 
-The LB fluid must be set up before using
-:class:`espressomd.electrokinetics.Electrokinetics` as shown above, before a
-diffusive species can be added. The variables ``density``, ``D``, and
+One can also add the species during the initialization step of the 
+:class:`espressomd.electrokinetics.Electrokinetics` by defining the list variable ``species``::
+
+    ek = espressomd.electrokinetics.Electrokinetics(species=[species], ...)
+
+The variables ``density``, ``D``, and
 ``valency`` must be set to properly initialize the diffusive species; the
 ``ext_force_density`` is optional.
 
@@ -1561,6 +1564,22 @@ rhomboid and hollowcone. We refer to the documentation of the
 the options associated to these shapes. In order to properly set up the
 boundaries, the ``charge_density`` and ``shape``
 must be specified.
+
+.. _Checkpointing:
+
+Checkpointing
+^^^^^^^^^^^^^
+::
+
+    ek.save_checkpoint(path)
+
+Checkpointing in the EK works quite similar to checkpointing in the LB, because the density is not saved within the :class:`espressomd.checkpointing` object. However one should keep in mind, that the EK not only saves the density of the species but also saves the population of the LB fluid in a separate file. To load a checkpoint the :class:`espressomd.electrokinetics.Electrokinetics` should have the same name as in the script it was saved, but to use the species one need to extract them from the :class:`espressomd.electrokinetics.Electrokinetics` via ``species``.
+
+::
+
+    checkpoint.load(cpt_path)
+    species = ek.get_params()['species']
+    ek.load_checkpoint(path)
 
 .. _Output:
 

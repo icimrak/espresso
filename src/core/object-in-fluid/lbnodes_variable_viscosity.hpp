@@ -15,12 +15,14 @@
 #include "bonded_interactions/bonded_interaction_data.hpp"
 #include "cells.hpp"
 #include "grid.hpp"
-#include "utils/math/triangle_functions.hpp"
+#include <utils/math/triangle_functions.hpp>
+#include <utils/index.hpp>
 #include <vector>
 #include <grid_based_algorithms/lb.hpp>
 #include "Triangle.hpp"
 
 using Utils::get_n_triangle;
+using Utils::get_linear_index;
 
 class LBodes_variable_viscosity {
 #ifdef LB_VARIABLE_VISCOSITY
@@ -42,14 +44,14 @@ class LBodes_variable_viscosity {
 
         void check_min_max_x_y(double &min_y, double &max_y, double &min_z, double &max_z, Triangle triangle);
 
-        void findingObjectBoundary(Triangle triangle, int pY, Vector3d normal_vector, double d,
-                                   std::vector<Vector3d> *boundaryPoints);
+        void findingObjectBoundary(Triangle triangle, int pY, Utils::Vector3d normal_vector, double d,
+                                   std::vector<Utils::Vector3d> *boundaryPoints);
 
-        void markingObjectBoundary(std::vector<Vector3d> &boundary_points, Vector3d normal_vector);
+        void markingObjectBoundary(std::vector<Utils::Vector3d> &boundary_points, Utils::Vector3d normal_vector);
 
-        void markingObjectBoundary_update_algorithm(std::vector<Vector3d> &boundary_points, Vector3d normal_vector);
+        void markingObjectBoundary_update_algorithm(std::vector<Utils::Vector3d> &boundary_points, Utils::Vector3d normal_vector);
 
-        void markNode(int x, int y, int z, Vector3d Z_point, LB_Node_Flag_Info flag);
+        void markNode(int x, int y, int z, Utils::Vector3d Z_point, LB_Node_Flag_Info flag);
 
         void markingObjectInside(int pY, int minZ, int maxZ, int minX, int maxX);
 

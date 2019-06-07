@@ -28,8 +28,8 @@
 #include "bonded_interactions/bonded_interaction_data.hpp"
 #include "grid.hpp"
 #include "particle_data.hpp"
-#include "utils/Vector.hpp"
-#include "utils/math/triangle_functions.hpp"
+#include <utils/math/triangle_functions.hpp>
+#include <utils/Vector.hpp>
 #include "grid_based_algorithms/lb.hpp"
 
 // set parameters for local forces
@@ -61,7 +61,6 @@ inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3,
                           double force[3], double force2[3], double force3[3],
                           double force4[3]) // first-fold-then-the-same approach
 {
-
   auto const fp2 = unfolded_position(*p2);
   auto const fp1 = fp2 + get_mi_vector(p1->r.p, fp2);
   auto const fp3 = fp2 + get_mi_vector(p3->r.p, fp2);
@@ -144,24 +143,33 @@ inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3,
   }
 
   /* bending
-     forceT1 is restoring force for triangle p1,p2,p3 and force2T restoring
-     force for triangle p2,p3,p4 p1 += forceT1; p2 -= 0.5*forceT1+0.5*forceT2;
-     p3 -= 0.5*forceT1+0.5*forceT2; p4 += forceT2; */
+     implemented according to updated expressions in book Computational Blood Cell Mechanics, by I.Cimrak and I.Jancigova, see errata...*/
   if (iaparams->p.oif_local_forces.kb > TINY_OIF_ELASTICITY_COEFFICIENT) {
-    auto const n1 = Utils::get_n_triangle(fp2, fp1, fp3).normalize();
-    auto const n2 = Utils::get_n_triangle(fp2, fp3, fp4).normalize();
+    // how fp1 - fp4 correspond to points A,B,C,D from the book, Figure A.1:
+     //    fp1 -> C
+     //    fp2 -> A
+     //    fp3 -> B
+     //    fp4 -> D
+
+    auto const Nc = Utils::get_n_triangle(fp1, fp2, fp3);    // returns (fp2 - fp1)x(fp3 - fp1), thus Nc = (A - C)x(B - C)
+    auto const Nd = Utils::get_n_triangle(fp4, fp3, fp2);    // returns (fp3 - fp4)x(fp2 - fp4), thus Nd = (B - D)x(A - D)
 
     auto const phi = Utils::angle_btw_triangles(fp1, fp2, fp3, fp4);
     auto const aa = (phi - iaparams->p.oif_local_forces
                                .phi0); // no renormalization by phi0, to be
                                        // consistent with Krueger and Fedosov
+    auto const BminA = fp3 - fp2;
     auto const fac = iaparams->p.oif_local_forces.kb * aa;
+    auto const factorFaNc = (fp2 - fp3) * (fp1 - fp3) / BminA.norm() / Nc.norm2();
+    auto const factorFaNd = (fp2 - fp3) * (fp4 - fp3) / BminA.norm() / Nd.norm2();
+    auto const factorFbNc = (fp2 - fp3) * (fp2 - fp1) / BminA.norm() / Nc.norm2();
+    auto const factorFbNd = (fp2 - fp3) * (fp2 - fp4) / BminA.norm() / Nd.norm2();
 
     for (int i = 0; i < 3; i++) {
-      force[i] += fac * n1[i];
-      force2[i] -= (0.5 * fac * n1[i] + 0.5 * fac * n2[i]);
-      force3[i] -= (0.5 * fac * n1[i] + 0.5 * fac * n2[i]);
-      force4[i] += fac * n2[i];
+      force[i] -= fac * BminA.norm()/Nc.norm2() * Nc[i];                // Fc
+      force2[i] +=  fac * (factorFaNc * Nc[i] + factorFaNd * Nd[i]);    // Fa
+      force3[i] +=  fac * (factorFbNc * Nc[i] + factorFbNd * Nd[i]);    // Fb
+      force4[i] -= fac * BminA.norm()/Nd.norm2() * Nd[i];               // Fd
     }
   }
 
@@ -177,10 +185,11 @@ inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3,
 
   */
   if (iaparams->p.oif_local_forces.kal > TINY_OIF_ELASTICITY_COEFFICIENT) {
-    auto handle_triangle = [](double kal, double A0, Vector3d const &fp1,
-                              Vector3d const &fp2, Vector3d const &fp3,
-                              double force1[3], double force2[3],
-                              double force3[3]) {
+
+    auto handle_triangle = [](double kal, double A0, Utils::Vector3d const &fp1,
+                              Utils::Vector3d const &fp2,
+                              Utils::Vector3d const &fp3, double force1[3],
+                              double force2[3], double force3[3]) {
       auto const h = (1. / 3.) * (fp1 + fp2 + fp3);
       auto const A = Utils::area_triangle(fp1, fp2, fp3);
       auto const t = sqrt(A / A0) - 1.0;
@@ -211,57 +220,6 @@ inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3,
                     iaparams->p.oif_local_forces.A02, fp2, fp3, fp4, force2,
                     force3, force4);
   }
-  
-  //#ifdef LB_VARIABLE_VISCOSITY
-    /* variable viscosity of the inner fluid
-       in the case that viscosity of the inner fluid of the cell is different from the viscosity of the fluid surrounding the cell
-  */
-  //if (iaparams->p.oif_local_forces.fluid_visc > TINY_OIF_ELASTICITY_COEFFICIENT) {
-    // we have two triangles to handle, since the oif_local_forces are bound to edges and thier two adjacent triangles
-    //auto handle_triangle = [](double fluid_visc, Vector3d const &fp1,
-          //                    Vector3d const &fp2, Vector3d const &fp3) {
-
-// tu treba dorobit to flagovanie. na vstupe mas vector fp1, fp2, fp3 - to su tvoje body ABC
-
-// nechavam tu nejake kusky kodu, aby si videl, ze sa daju vectory scitava priamo, nielen po zlozkach, a tak dalej....
-//      auto const h = (1. / 3.) * (fp1 + fp2 + fp3);
-//      auto const A = Utils::area_triangle(fp1, fp2, fp3);
-
-// takto sa da vypocitat dlzka vektora
-//      auto const m1_length = m1.norm();
-
-// Tu treba detekovat vsetky body Q, ktore lezia v trojuholniku fp1,fp2,fp3 a maju celociselne y-ove a z-ove suradnice.
-// Ak vies, ze Q ma suradnice (qx,qy,qz), tak este treba zistit, ci mrezovy bod (floor(qx),qy,qz) leziaci nalavo
-// trojuholnika je vnutri bunky  a ten napravo (floor(qx) + 1,qy,qz) zase zvonku bunky, alebo je to naopak.
-// To sa zisti podla orientacie trojuholnika. Totiz poradie bodov fp1,fp2,fp3 je dane vzdy tak, ze normalovy vector
-// vypocitany ako vektorovy sucin fp1fp2 x fp1fp3 ukazuje smerom dovnutra bunky. Normalovy vector vies ziskat ako
-//get_n_triangle(fp1, fp2, fp3).normalize();
-// Postup, ako sa zisti, ci si vo vnutri alebo vonku ti posielam mailom so subjektom "vonku ci vo vnutri"
-
-
-
-// pokial uz vies, ze chces nastavit hodnotu viskozity pre konkretny bod priestoru so suradnicami XX,YY,ZZ, tak sa to da takto:
-//        najprv si ziskas index v linearnom poli
-//        int index = get_linear_index(XX, YY, ZZ, lblattice.halo_grid);
-//        a teraz nastavis novu hodnotu pre premenlivu viskozitu
-//          lbfields[index].var_visc_gamma_shear = NEJAKA_HODNOTA;
-//    tu NEJAKA_HODNOTA vypocitas ako
-      //    double NEJAKA_HODNOTA = 1. - 2. / (6. * (fluid_visc) * lbpar.tau /(lbpar.agrid * lbpar.agrid) + 1.);
-          //printf("%lf ",NEJAKA_HODNOTA);
-//
-// toto je zobrate z vypoctu gamma_shear z lb.cpp, funkcia lb_reinit_parameters() 
-
-
-   // };
-
-    // it is important to use the right order. Particles fp1, fp2, fp3. fp4 are given such that fp2fp3 is the edge. Since in the bending part, the normals are computed from triangles fp2fp1fp3 and fp2fp3fp4, we need to keep this order of points.  
-   // handle_triangle(iaparams->p.oif_local_forces.fluid_visc, fp2, fp1, fp3);
-   // handle_triangle(iaparams->p.oif_local_forces.fluid_visc, fp2, fp3, fp4);
-//  }
-//  #endif
-  
-  
-  
   return 0;
 }
 
