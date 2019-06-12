@@ -24,15 +24,47 @@
  *  \ref forces.cpp
  */
 
+#include "particle_data.hpp"
+#include "bonded_interactions/bonded_interaction_data.hpp"
+#include "cells.hpp"
+#include "communication.hpp"
+#include "errorhandling.hpp"
+#include "grid.hpp"
+#include "grid_based_algorithms/lb_interface.hpp"
+#include "grid_based_algorithms/lb.hpp"
+#include "particle_data.hpp"
+
+#include <utils/Vector.hpp>
+#include <utils/math/triangle_functions.hpp>
+using Utils::angle_btw_triangles;
+using Utils::area_triangle;
+using Utils::get_n_triangle;
+#include <utils/constants.hpp>
+#include "../../../build/myconfig.hpp"
+
+#include "lbnodes_variable_viscosity.hpp"
+
 /** set parameters for the OIF_GLOBAL_FORCES potential.
  */
 int oif_global_forces_set_params(int bond_type, double A0_g, double ka_g,
                                  double V0, double kv, double inner_fluid_visc);
 void calc_oif_global(double *area_volume, int molType);
-#ifdef LB_VARIABLE_VISCOSITY
-void flag_lbnodes_variable_visc();
-#endif
 void add_oif_global_forces(double const *area_volume, int molType);
+
+bool calc_vectors_of_triangles(Particle &p, Utils::Vector3d &p11, Utils::Vector3d &p22, Utils::Vector3d &p33, Particle* p1, Particle* p2,
+        Particle* p3, int molType, Bonded_ia_parameters* iaparams, int test);
+
+
+#ifdef LB_VARIABLE_VISCOSITY
+extern LBodes_variable_viscosity *lbodes_variable_viscosity;
+extern bool flagging_lbnodes_var_visc;
+extern bool reflagging_lbnodes_var_visc;
+
+
+void flag_lbnodes_variable_visc(LBodes_variable_viscosity *lbodes_variable_visc);
+void reflag_lbnodes_variable_visc();
+void update_flags_variable_visc();
+#endif
 
 /************************************************************/
 

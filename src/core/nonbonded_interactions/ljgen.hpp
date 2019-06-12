@@ -39,7 +39,6 @@
 #include "nonbonded_interaction_data.hpp"
 
 #include "particle_data.hpp"
-#include "utils.hpp"
 
 int ljgen_set_params(int part_type_a, int part_type_b, double eps, double sig,
                      double cut, double shift, double offset, double a1,
@@ -130,9 +129,8 @@ inline double ljgen_pair_energy(const Particle *p1, const Particle *p2,
            * (ia_params->LJGEN_b1 * pow(frac, ia_params->LJGEN_a1) -
               ia_params->LJGEN_b2 * pow(frac, ia_params->LJGEN_a2) +
               ia_params->LJGEN_shift);
-  } else {
-    return 0.0;
   }
+  return 0.0;
 }
 
 #endif

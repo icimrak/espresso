@@ -12,7 +12,7 @@ autom4te.cache
 .deps/
 myconfig.h
 myconfig.hpp
-build/
+build*
 CMakeFiles
 cmake-build*
 compile_commands.json
@@ -59,3 +59,4 @@ doc/dg/background_errors.unsorted
 
 .ycm_extra_conf.py
 cmake-build-debug
+.clion.source.upload.marker

@@ -27,7 +27,7 @@ namespace Observables {
 class FluxDensityProfile : public PidProfileObservable {
 public:
   int n_values() const override { return 3 * n_x_bins * n_y_bins * n_z_bins; }
-  std::vector<double> operator()(PartCfg &partCfg) const override {
+  std::vector<double> evaluate(PartCfg &partCfg) const override {
     std::array<size_t, 3> n_bins{{static_cast<size_t>(n_x_bins),
                                   static_cast<size_t>(n_y_bins),
                                   static_cast<size_t>(n_z_bins)}};
@@ -36,7 +36,7 @@ public:
          std::make_pair(min_z, max_z)}};
     Utils::Histogram<double, 3> histogram(n_bins, 3, limits);
     for (auto const &id : ids()) {
-      auto const ppos = ::Vector3d(folded_position(partCfg[id]));
+      auto const ppos = ::Utils::Vector3d(folded_position(partCfg[id]));
       histogram.update(ppos, partCfg[id].m.v);
     }
     histogram.normalize();

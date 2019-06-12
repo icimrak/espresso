@@ -21,6 +21,9 @@
 #ifndef INTEGRATE_H
 #define INTEGRATE_H
 
+#include "object-in-fluid/oif_global_forces.hpp"
+
+
 /** \file
  *  Molecular dynamics integrator.
  *
@@ -97,5 +100,9 @@ int python_integrate(int n_steps, bool recalc_forces, bool reuse_forces);
 void integrate_set_nvt();
 int integrate_set_npt_isotropic(double ext_pressure, double piston, int xdir,
                                 int ydir, int zdir, bool cubic_box);
+
+#ifdef LB_VARIABLE_VISCOSITY
+extern LBodes_variable_viscosity lbodes_variable_visc_instance;
+#endif
 
 #endif
