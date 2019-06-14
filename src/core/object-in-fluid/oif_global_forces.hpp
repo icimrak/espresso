@@ -40,7 +40,6 @@ using Utils::angle_btw_triangles;
 using Utils::area_triangle;
 using Utils::get_n_triangle;
 #include <utils/constants.hpp>
-#include "../../../build/myconfig.hpp"
 
 #include "lbnodes_variable_viscosity.hpp"
 
