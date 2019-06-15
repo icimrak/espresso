@@ -918,7 +918,6 @@ class OifCell(object):
 
         self.cell_type = cell_type
         self.cell_type.system.max_oif_objects = self.cell_type.system.max_oif_objects + 1
-        self.cell_type.system.oif_objects_up_to_date = False
         self.mesh = cell_type.mesh.copy(
             origin=origin, particle_type=particle_type, particle_mass=particle_mass, rotate=rotate)
         self.particle_mass = particle_mass
