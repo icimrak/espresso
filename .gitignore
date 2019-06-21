@@ -53,6 +53,7 @@ doc/dg/background_errors.unsorted
 
 # IDE
 .idea
+.bash_history
 
 # Compiled python
 *.pyc
