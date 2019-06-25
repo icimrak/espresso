@@ -203,7 +203,8 @@ void integrate_vv(int n_steps, int reuse_forces) {
   immersed_boundaries.init_volume_conservation();
 #endif
 #ifdef LB_VARIABLE_VISCOSITY
-    if (sim_time != 0){
+  // every 100 timestamp run initial algorithm
+    if (sim_time > 0 && n_steps % 100 != 0){
         //Calling Updating algorithm of LB_VARIABLE_VISCOSITY
         reflag_lbnodes_variable_visc();
     } else {

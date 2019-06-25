@@ -138,7 +138,6 @@ void force_calc() {
     // can add another quantity.
     area_volume[0] = 0.0;
     area_volume[1] = 0.0;
-  //  printf("oif_objects_up_to_date: %d", oif_objects_up_to_date);
     for (int i = 0; i < max_oif_objects; i++) {
       calc_oif_global(area_volume, i);
       if (fabs(area_volume[0]) < 1e-100 && fabs(area_volume[1]) < 1e-100)

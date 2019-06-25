@@ -163,8 +163,6 @@ const std::unordered_map<int, Datafield> fields{
 #ifdef OIF_GLOBAL_FORCES
     {FIELD_MAX_OIF_OBJECTS,
      {&max_oif_objects, Datafield::Type::INT, 1, "max_oif_objects"}},
-    {FIELD_OIF_OBJECTS_UP_TO_DATE,
-     {&oif_objects_up_to_date, Datafield::Type::BOOL, 1, "oif_objects_up_to_date"}},
 #endif
     {FIELD_THERMALIZEDBONDS,
      {&n_thermalized_bonds, Datafield::Type::INT, 1,

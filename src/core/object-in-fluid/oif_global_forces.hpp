@@ -40,7 +40,6 @@ using Utils::angle_btw_triangles;
 using Utils::area_triangle;
 using Utils::get_n_triangle;
 #include <utils/constants.hpp>
-#include "../../../build/myconfig.hpp"
 
 #include "lbnodes_variable_viscosity.hpp"
 
@@ -69,5 +68,4 @@ void update_flags_variable_visc();
 /************************************************************/
 
 extern int max_oif_objects;
-extern bool oif_objects_up_to_date;
 #endif

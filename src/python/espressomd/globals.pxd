@@ -149,7 +149,6 @@ cdef extern from "immersed_boundaries.hpp":
 
 cdef extern from "object-in-fluid/oif_global_forces.hpp":
     int max_oif_objects
-    int oif_objects_up_to_date
 
 cdef extern from "forcecap.hpp":
     double forcecap_get()

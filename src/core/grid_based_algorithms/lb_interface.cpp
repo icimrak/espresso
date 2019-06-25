@@ -741,7 +741,6 @@ void lb_lbfluid_print_vtk_velocity(const std::string &filename,
 
 
 void lb_lbfluid_print_vtk_viscosity(const std::string &filename){
-#ifdef LB
 #ifdef LB_VARIABLE_VISCOSITY
     FILE *fp = fopen(filename.c_str(), "w");
 
@@ -749,7 +748,7 @@ void lb_lbfluid_print_vtk_viscosity(const std::string &filename){
         throw std::runtime_error("Could not open file for writing.");
     }
     auto const grid_size = lblattice.global_grid;
-    Vector3i position;
+    Utils::Vector3i position;
 
     fprintf(fp,
             "# vtk DataFile Version 2.0\nlbviscosity_cpu\n"
@@ -771,7 +770,6 @@ void lb_lbfluid_print_vtk_viscosity(const std::string &filename){
     }
     fclose(fp);
 #endif //LB_VARIABLE_VISCOSITY
-#endif // LB
 }
 
 void lb_lbfluid_print_boundary(const std::string &filename) {
