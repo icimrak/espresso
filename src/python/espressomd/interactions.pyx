@@ -3230,7 +3230,7 @@ class OifGlobalForces(BondedInteraction):
         """Sets parameters that are not required to their default value.
 
         """
-        self._params = {"A0_g": 1., "ka_g": 0., "V0": 1., "kv": 0., "inner_fluid_visc": 0.}
+        self._params = {"A0_g": 1., "ka_g": 0., "V0": 1., "kv": 0., "inner_fluid_visc": 1.}
 
     def _get_params_from_es_core(self):
         return \

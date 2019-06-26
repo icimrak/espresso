@@ -819,6 +819,9 @@ inline std::array<T, 19> lb_relax_modes(Lattice::index_t index,
 
 #ifndef LB_VARIABLE_VISCOSITY
   /* constant fluid viscosity */
+    //IC: 
+  //  printf("%2.20lf %2.20lf %2.20lf %2.20lf %2.20lf %2.20lf\n",pi_eq[0] + lbpar.gamma_bulk * (modes[4] - pi_eq[0]),pi_eq[1] + lbpar.gamma_shear * (modes[5] - pi_eq[1]),pi_eq[2] + lbpar.gamma_shear * (modes[6] - pi_eq[2]),pi_eq[3] + lbpar.gamma_shear * (modes[7] - pi_eq[3]),pi_eq[4] + lbpar.gamma_shear * (modes[8] - pi_eq[4]),pi_eq[5] + lbpar.gamma_shear * (modes[9] - pi_eq[5]));
+  //  printf("%lf\n", lbpar.gamma_shear);
   return {{modes[0], modes[1], modes[2], modes[3],
            /* relax the stress modes */
            pi_eq[0] + lbpar.gamma_bulk * (modes[4] - pi_eq[0]),
@@ -836,6 +839,7 @@ inline std::array<T, 19> lb_relax_modes(Lattice::index_t index,
            lbpar.gamma_even * modes[18]}};
 #endif
 #ifdef LB_VARIABLE_VISCOSITY
+
   /* variable fluid viscosity */
   double gamma_shear_tmp = lbfields[index].var_visc_gamma_shear;
   double m5, m6, m7, m8, m9;
@@ -844,6 +848,10 @@ inline std::array<T, 19> lb_relax_modes(Lattice::index_t index,
   m7 = pi_eq[3] + gamma_shear_tmp * (modes[7] - pi_eq[3]);
   m8 = pi_eq[4] + gamma_shear_tmp * (modes[8] - pi_eq[4]);
   m9 = pi_eq[5] + gamma_shear_tmp * (modes[9] - pi_eq[5]);
+    //IC:
+//    printf("%2.20lf %2.20lf %2.20lf %2.20lf %2.20lf %2.20lf\n", pi_eq[0] + lbpar.gamma_bulk * (modes[4] - pi_eq[0]), m5, m6, m7, m8, m9);
+//    printf("%lf\n", gamma_shear_tmp);
+
   return {{modes[0], modes[1], modes[2], modes[3],
            /* relax the stress modes */
            pi_eq[0] + lbpar.gamma_bulk * (modes[4] - pi_eq[0]),
@@ -1302,6 +1310,8 @@ void lb_check_halo_regions(const LB_Fluid &lbfluid) {
 
 void lb_calc_local_fields(Lattice::index_t index, double *rho, double *j,
                           double *pi) {
+ //IC: 
+    printf("entering lb_calc_local_fields \n");
 #ifdef LB_BOUNDARIES
   if (lbfields[index].boundary) {
     *rho = lbpar.rho;
@@ -1357,6 +1367,9 @@ void lb_calc_local_fields(Lattice::index_t index, double *rho, double *j,
              (0.5 + 0.5 * lbpar.gamma_shear) * (modes[8] - modes_from_pi_eq[4]);
   modes[9] = modes_from_pi_eq[5] +
              (0.5 + 0.5 * lbpar.gamma_shear) * (modes[9] - modes_from_pi_eq[5]);
+  //IC: 
+    printf("%lf %lf %lf %lf %lf %lf \n",modes[4],modes[5],modes[6],modes[7],modes[8],modes[9]);
+
 #endif
 #ifdef LB_VARIABLE_VISCOSITY
   /* variable fluid viscosity */
@@ -1371,6 +1384,8 @@ void lb_calc_local_fields(Lattice::index_t index, double *rho, double *j,
             (0.5 + 0.5 * gamma_shear_tmp) * (modes[8] - modes_from_pi_eq[4]);
   modes[9] = modes_from_pi_eq[5] +
             (0.5 + 0.5 * gamma_shear_tmp) * (modes[9] - modes_from_pi_eq[5]);
+  //IC: 
+    printf("%lf %lf %lf %lf %lf %lf \n",modes[4],modes[5],modes[6],modes[7],modes[8],modes[9]);
 #endif
   // Transform the stress tensor components according to the modes that
   // correspond to those used by U. Schiller. In terms of populations this

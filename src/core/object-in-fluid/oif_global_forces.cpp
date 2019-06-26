@@ -218,6 +218,8 @@ void calc_oif_global(double *area_volume, int molType) { // first-fold-then-the-
 #endif
 
 
+
+
                 // unfolded positions correct
                 auto const VOL_A = area_triangle(p11_unfolded, p22_unfolded, p33_unfolded);
                 partArea += VOL_A;

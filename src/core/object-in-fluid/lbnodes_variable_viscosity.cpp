@@ -576,8 +576,15 @@ void LBodes_variable_viscosity::print_lbnodes_variable_visc(int y) {
 void LBodes_variable_viscosity::set_viscosity_to_node(bool is_inner, LB_FluidNode &node) {
     if (is_inner) {
         node.var_visc_gamma_shear = 1. - 2. / (6. * inner_fluid_visc * lbpar.tau / (lbpar.agrid * lbpar.agrid) + 1.);
+    // IC:
+    //printf("IC: is inner %lf %lf %lf %lf \n",inner_fluid_visc, lbpar.tau, lbpar.agrid, node.var_visc_gamma_shear);
     } else {
-        node.var_visc_gamma_shear = 1. - 2. / (6. * lbpar.viscosity * lbpar.tau / (lbpar.agrid * lbpar.agrid) + 1.);
+        node.var_visc_gamma_shear = 1. - 2. / (6. * lbpar.viscosity + 1.); // expressions diffrent, because with uniform viscosity, the fluid viscosity is first recomputed in lb.pxd in function call python_lbfluid_set_viscosity using transformation fluid_visc -> fluid_visc * tau / (agrid * agrid)
+    // IC:
+//    printf("IC: is outer %lf %lf %lf %lf \n", lbpar.viscosity, lbpar.tau, lbpar.agrid, node.var_visc_gamma_shear);
     }
+    
+
+    
 }
 #endif // LB_VARIABLE_VISCOSITY
