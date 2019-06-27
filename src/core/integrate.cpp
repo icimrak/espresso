@@ -203,14 +203,10 @@ void integrate_vv(int n_steps, int reuse_forces) {
   immersed_boundaries.init_volume_conservation();
 #endif
 #ifdef LB_VARIABLE_VISCOSITY
-  // every 100 timestamp run initial algorithm
-    if (sim_time > 0 && n_steps % 100 != 0){
-        //Calling Updating algorithm of LB_VARIABLE_VISCOSITY
-        reflag_lbnodes_variable_visc();
-    } else {
-        //Calling Initial algorithm of LB_VARIABLE_VISCOSITY
-        flag_lbnodes_variable_visc(&lbodes_variable_visc_instance);
-    }
+  if (sim_time < TINY_OIF_ELASTICITY_COEFFICIENT) {
+    flag_lbnodes_variable_visc(&lbodes_variable_visc_instance);
+   // printf("pociatrocny reflag celegoi boxu\n");
+  }
 #endif
 
 
@@ -288,7 +284,21 @@ void integrate_vv(int n_steps, int reuse_forces) {
   for (int step = 0; step < n_steps; step++) {
     ESPRESSO_PROFILER_CXX_MARK_LOOP_ITERATION(integration_loop, step);
     INTEG_TRACE(fprintf(stderr, "%d: STEP %d\n", this_node, step));
-
+#ifdef LB_VARIABLE_VISCOSITY
+//   every 100 timestamp run initial algorithm
+   // printf("%lf %lf\n",sim_time/time_step, std::fmod(sim_time/time_step,100.0));
+    
+    
+    
+    if (std::fmod(sim_time/time_step,100.0) > 0.01  &&  std::fmod(sim_time/time_step,100.0) <  99.99){
+        //Calling Updating algorithm of LB_VARIABLE_VISCOSITY
+        reflag_lbnodes_variable_visc();
+    } else if (sim_time > TINY_OIF_ELASTICITY_COEFFICIENT) {
+        //Calling Initial algorithm of LB_VARIABLE_VISCOSITY
+        flag_lbnodes_variable_visc(&lbodes_variable_visc_instance);
+     //   printf("flagujem, %lf %lf\n",sim_time/time_step, std::fmod(sim_time/time_step,100.0));
+    }
+#endif
 #ifdef BOND_CONSTRAINT
     if (n_rigidbonds)
       save_old_pos();
