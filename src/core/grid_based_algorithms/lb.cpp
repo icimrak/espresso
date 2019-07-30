@@ -1310,8 +1310,6 @@ void lb_check_halo_regions(const LB_Fluid &lbfluid) {
 
 void lb_calc_local_fields(Lattice::index_t index, double *rho, double *j,
                           double *pi) {
- //IC: 
-    printf("entering lb_calc_local_fields \n");
 #ifdef LB_BOUNDARIES
   if (lbfields[index].boundary) {
     *rho = lbpar.rho;
@@ -1368,7 +1366,7 @@ void lb_calc_local_fields(Lattice::index_t index, double *rho, double *j,
   modes[9] = modes_from_pi_eq[5] +
              (0.5 + 0.5 * lbpar.gamma_shear) * (modes[9] - modes_from_pi_eq[5]);
   //IC: 
-    printf("%lf %lf %lf %lf %lf %lf \n",modes[4],modes[5],modes[6],modes[7],modes[8],modes[9]);
+//    printf("%lf %lf %lf %lf %lf %lf \n",modes[4],modes[5],modes[6],modes[7],modes[8],modes[9]);
 
 #endif
 #ifdef LB_VARIABLE_VISCOSITY
@@ -1385,7 +1383,7 @@ void lb_calc_local_fields(Lattice::index_t index, double *rho, double *j,
   modes[9] = modes_from_pi_eq[5] +
             (0.5 + 0.5 * gamma_shear_tmp) * (modes[9] - modes_from_pi_eq[5]);
   //IC: 
-    printf("%lf %lf %lf %lf %lf %lf \n",modes[4],modes[5],modes[6],modes[7],modes[8],modes[9]);
+//    printf("%lf %lf %lf %lf %lf %lf \n",modes[4],modes[5],modes[6],modes[7],modes[8],modes[9]);
 #endif
   // Transform the stress tensor components according to the modes that
   // correspond to those used by U. Schiller. In terms of populations this
