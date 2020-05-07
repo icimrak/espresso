@@ -472,8 +472,13 @@ calc_bonded_four_body_force(Bonded_ia_parameters const &iaparams,
   switch (iaparams.type) {      
   case BONDED_IA_OIF_OUT_DIRECTION:
     {
-        auto boogie = calc_out_direction(p2, p3, p4);
-    p1.p.out_direction = {0.0,0.0,0.0};
+    double out_direction[3];
+    auto const tmp = calc_out_direction(p2, p3, p4); 
+    out_direction[0] = tmp[0];
+    out_direction[1] = tmp[1];
+    out_direction[2] = tmp[2];
+    set_particle_out_direction(p1.p.identity, out_direction);
+
     Utils::Vector3d force1 = {0.0,0.0,0.0,0.0};
     Utils::Vector3d force2 = {0.0,0.0,0.0,0.0};
     Utils::Vector3d force3 = {0.0,0.0,0.0,0.0};
