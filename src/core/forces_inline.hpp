@@ -57,8 +57,11 @@
 #include "nonbonded_interactions/thole.hpp"
 #include "nonbonded_interactions/wca.hpp"
 #include "npt.hpp"
+#include "object-in-fluid/membrane_collision.hpp"
 #include "object-in-fluid/oif_global_forces.hpp"
 #include "object-in-fluid/oif_local_forces.hpp"
+#include "object-in-fluid/out_direction.hpp"
+#include "particle_data.hpp"
 #include "rotation.hpp"
 #include "thermostat.hpp"
 
@@ -170,6 +173,10 @@ inline Utils::Vector3d calc_non_bonded_pair_force_parts(
 /*soft-sphere potential*/
 #ifdef SOFT_SPHERE
   force_factor += soft_pair_force_factor(ia_params, dist);
+#endif
+/*repulsive membrane potential*/
+#ifdef MEMBRANE_COLLISION
+  force += membrane_collision_pair_force(p1, p2, ia_params, d, dist);
 #endif
 /*hat potential*/
 #ifdef HAT
@@ -462,7 +469,11 @@ inline boost::optional<std::tuple<Utils::Vector3d, Utils::Vector3d,
 calc_bonded_four_body_force(Bonded_ia_parameters const &iaparams,
                             Particle const &p1, Particle const &p2,
                             Particle const &p3, Particle const &p4) {
-  switch (iaparams.type) {
+  switch (iaparams.type) {      
+  case BONDED_IA_OIF_OUT_DIRECTION:
+    auto const &boogie = calc_out_direction(p2, p3, p4);
+    p1.p.out_direction = boogie;
+    return std::make_tuple([0.0,0.0,0.0], [0.0,0.0,0.0], [0.0,0.0,0.0], [0.0,0.0,0.0]); // because it needs to return a zero force that will be added....     
   case BONDED_IA_OIF_LOCAL_FORCES:
     return calc_oif_local(p1, p2, p3, p4, iaparams);
   case BONDED_IA_IBM_TRIBEND:

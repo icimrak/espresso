@@ -383,6 +383,8 @@ integrator or thermostat:
    .. seealso:: :ref:`Isotropic NPT thermostat`
 
 
+-  ``MEMBRANE_COLLISION``
+
 -  ``REACTION_ENSEMBLE``
 
 -  ``ENGINE``

@@ -74,6 +74,8 @@ enum BondedInteraction : int {
   BONDED_IA_OIF_LOCAL_FORCES,
   /** Type of bonded interaction: OIF global forces. */
   BONDED_IA_OIF_GLOBAL_FORCES,
+  /** Type of bonded interaction: OIF out direction. */
+  BONDED_IA_OIF_OUT_DIRECTION,
   /** Type of bonded interaction is a wall repulsion (immersed boundary). */
   BONDED_IA_IBM_TRIEL,
   /** Type of bonded interaction is volume conservation force (immersed

@@ -43,7 +43,11 @@ set(EspressoCore_SRC
     exclusions.cpp
     CellStructure.cpp
     PartCfg.cpp
-    AtomDecomposition.cpp)
+    AtomDecomposition.cpp
+  object-in-fluid/membrane_collision.cpp
+  object-in-fluid/oif_global_forces.cpp
+  object-in-fluid/oif_local_forces.cpp
+  object-in-fluid/out_direction.cpp)
 
 if(CUDA)
   set(EspressoCuda_SRC

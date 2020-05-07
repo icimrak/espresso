@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
 import espressomd
-from espressomd.interactions import OifLocalForces, OifGlobalForces
+from espressomd.interactions import OifLocalForces, OifGlobalForces, OifOutDirection
 from .oif_utils import (
     large_number, small_epsilon, discard_epsilon, custom_str, norm,
     vec_distance, get_triangle_normal, area_triangle, angle_btw_triangles, angle_btw_vectors,
