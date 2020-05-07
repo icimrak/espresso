@@ -32,25 +32,16 @@
 #include "communication.hpp"
 #include "cuda_init.hpp"
 #include "cuda_interface.hpp"
-#include "energy.hpp"
 #include "errorhandling.hpp"
-#include "forces.hpp"
-#include "ghosts.hpp"
 #include "global.hpp"
 #include "grid.hpp"
 #include "grid_based_algorithms/electrokinetics.hpp"
 #include "grid_based_algorithms/lb_boundaries.hpp"
 #include "grid_based_algorithms/lb_interface.hpp"
 #include "immersed_boundaries.hpp"
-#include "metadynamics.hpp"
 #include "npt.hpp"
-#include "nsquare.hpp"
 #include "partCfg_global.hpp"
-#include "pressure.hpp"
-#include "random.hpp"
-#include "rattle.hpp"
-#include "reaction_ensemble.hpp"
-#include "rotation.hpp"
+#include "particle_data.hpp"
 #include "statistics.hpp"
 #include "thermostat.hpp"
 #include "virtual_sites.hpp"
@@ -69,10 +60,6 @@ static bool reinit_thermo = true;
 static int reinit_electrostatics = false;
 static int reinit_magnetostatics = false;
 
-#ifdef CUDA
-static int reinit_particle_comm_gpu = true;
-#endif
-
 #if defined(OPEN_MPI) &&                                                       \
     (OMPI_MAJOR_VERSION == 2 && OMPI_MINOR_VERSION <= 1 ||                     \
      OMPI_MAJOR_VERSION == 3 &&                                                \
@@ -87,15 +74,9 @@ static int reinit_particle_comm_gpu = true;
 #endif
 
 void on_program_start() {
-
 #ifdef CUDA
   cuda_init();
 #endif
-
-  /*
-    call the initialization of the modules here
-  */
-  Random::init_random();
 
   init_node_grid();
 
@@ -126,23 +107,16 @@ void on_integration_start() {
   /********************************************/
   /* end sanity checks                        */
   /********************************************/
+
 #ifdef CUDA
-  if (reinit_particle_comm_gpu) {
-    gpu_change_number_of_part_to_comm();
-    reinit_particle_comm_gpu = false;
-  }
   MPI_Bcast(gpu_get_global_particle_vars_pointer_host(),
             sizeof(CUDA_global_part_vars), MPI_BYTE, 0, comm_cart);
-#endif
-
-#ifdef METADYNAMICS
-  meta_init();
 #endif
 
   // Here we initialize volume conservation
   // This function checks if the reference volumes have been set and if
   // necessary calculates them
-  immersed_boundaries.init_volume_conservation();
+  immersed_boundaries.init_volume_conservation(cell_structure);
 
   /* Prepare the thermostat */
   if (reinit_thermo) {
@@ -155,8 +129,6 @@ void on_integration_start() {
   npt_ensemble_init(box_geo);
 #endif
 
-  /* Update particle and observable information for routines in statistics.cpp
-   */
   invalidate_obs();
   partCfg().invalidate();
   invalidate_fetch_cache();
@@ -189,8 +161,7 @@ void on_integration_start() {
 void on_observable_calc() {
   /* Prepare particle structure: Communication step: number of ghosts and ghost
    * information */
-
-  cells_update_ghosts();
+  cells_update_ghosts(global_ghost_flags());
   update_dependent_particles();
 #ifdef ELECTROSTATICS
   if (reinit_electrostatics) {
@@ -211,6 +182,8 @@ void on_observable_calc() {
     ek_integrate_electrostatics();
   }
 #endif
+
+  clear_particle_node();
 }
 
 void on_particle_charge_change() {
@@ -222,17 +195,10 @@ void on_particle_charge_change() {
 }
 
 void on_particle_change() {
-
-  set_resort_particles(Cells::RESORT_LOCAL);
+  cell_structure.set_resort_particles(Cells::RESORT_LOCAL);
   reinit_electrostatics = true;
   reinit_magnetostatics = true;
 
-#ifdef CUDA
-  lb_lbfluid_invalidate_particle_allocation();
-#endif
-#ifdef CUDA
-  reinit_particle_comm_gpu = true;
-#endif
   invalidate_obs();
 
   /* the particle information is no longer valid */
@@ -258,17 +224,13 @@ void on_coulomb_change() {
      since the required cutoff might have reduced. */
   on_short_range_ia_change();
 
-#ifdef CUDA
-  reinit_particle_comm_gpu = true;
-#endif
   recalc_forces = true;
 }
 
 void on_short_range_ia_change() {
   invalidate_obs();
 
-  recalc_maximal_cutoff();
-  cells_on_geometry_change(0);
+  cells_on_geometry_change(false);
 
   recalc_forces = true;
 }
@@ -288,23 +250,13 @@ void on_lbboundary_change() {
 #endif
 }
 
-void on_resort_particles(const ParticleRange &particles) {
-#ifdef ELECTROSTATICS
-  Coulomb::on_resort_particles(particles);
-#endif /* ifdef ELECTROSTATICS */
-
-  /* DIPOLAR interactions so far don't need this */
-
-  recalc_forces = true;
-}
+void on_resort_particles() { recalc_forces = true; }
 
 void on_boxl_change() {
-
   grid_changed_box_l(box_geo);
   /* Electrostatics cutoffs mostly depend on the system size,
      therefore recalculate them. */
-  recalc_maximal_cutoff();
-  cells_on_geometry_change(0);
+  cells_on_geometry_change(false);
 
 /* Now give methods a chance to react to the change in box length */
 #ifdef ELECTROSTATICS
@@ -322,7 +274,6 @@ void on_boxl_change() {
 }
 
 void on_cell_structure_change() {
-
 /* Now give methods a chance to react to the change in cell
    structure. Most ES methods need to reinitialize, as they depend
    on skin, node grid and so on. Only for a change in box length we
@@ -352,13 +303,6 @@ void on_parameter_change(int field) {
   case FIELD_BOXL:
     on_boxl_change();
     break;
-  case FIELD_MIN_GLOBAL_CUT:
-    recalc_maximal_cutoff();
-    cells_on_geometry_change(0);
-    break;
-  case FIELD_SKIN:
-    cells_on_geometry_change(0);
-    break;
   case FIELD_PERIODIC:
 #ifdef SCAFACOS
 #ifdef ELECTROSTATICS
@@ -371,16 +315,13 @@ void on_parameter_change(int field) {
       Scafacos::update_system_params();
     }
 #endif
-
 #endif
-    cells_on_geometry_change(CELL_FLAG_GRIDCHANGED);
+  case FIELD_MIN_GLOBAL_CUT:
+  case FIELD_SKIN:
+    cells_on_geometry_change(false);
     break;
   case FIELD_NODEGRID:
     grid_changed_n_nodes();
-    cells_on_geometry_change(CELL_FLAG_GRIDCHANGED);
-    break;
-  case FIELD_MINNUMCELLS:
-  case FIELD_MAXNUMCELLS:
     cells_re_init(CELL_STRUCTURE_CURRENT, cell_structure.min_range);
     break;
   case FIELD_TEMPERATURE:
@@ -402,26 +343,16 @@ void on_parameter_change(int field) {
       nptiso.invalidate_p_vel = true;
     break;
 #endif
-  case FIELD_THERMO_SWITCH:
-    /* DPD needs ghost velocities, other thermostats not */
-    on_ghost_flags_change();
-    break;
-  case FIELD_LATTICE_SWITCH:
-    /* LB needs ghost velocities */
-    on_ghost_flags_change();
     break;
   case FIELD_FORCE_CAP:
     /* If the force cap changed, forces are invalid */
     invalidate_obs();
     recalc_forces = true;
     break;
+  case FIELD_THERMO_SWITCH:
+  case FIELD_LATTICE_SWITCH:
   case FIELD_RIGIDBONDS:
-    /* Rattle bonds needs ghost velocities */
-    on_ghost_flags_change();
-    break;
   case FIELD_THERMALIZEDBONDS:
-    /* Thermalized distance bonds needs ghost velocities */
-    on_ghost_flags_change();
     break;
   case FIELD_SIMTIME:
     recalc_forces = true;
@@ -429,40 +360,40 @@ void on_parameter_change(int field) {
   }
 }
 
-void on_ghost_flags_change() {
-  /* that's all we change here */
-  extern bool ghosts_have_v;
-  extern bool ghosts_have_bonds;
+/**
+ * @brief Returns the ghost flags required for running pair
+ *        kernels for the global state, e.g. the force calculation.
+ * @return Required data parts;
+ */
+unsigned global_ghost_flags() {
+  /* Position and Properties are always requested. */
+  unsigned data_parts = Cells::DATA_PART_POSITION | Cells::DATA_PART_PROPERTIES;
 
-  ghosts_have_v = false;
-  ghosts_have_bonds = false;
-
-  /* DPD and LB need also ghost velocities */
   if (lattice_switch == ActiveLB::CPU)
-    ghosts_have_v = true;
-#ifdef BOND_CONSTRAINT
-  if (n_rigidbonds)
-    ghosts_have_v = true;
-#endif
+    data_parts |= Cells::DATA_PART_MOMENTUM;
+
   if (thermo_switch & THERMO_DPD)
-    ghosts_have_v = true;
-  // THERMALIZED_DIST_BOND needs v to calculate v_com and v_dist for thermostats
+    data_parts |= Cells::DATA_PART_MOMENTUM;
+
   if (n_thermalized_bonds) {
-    ghosts_have_v = true;
-    ghosts_have_bonds = true;
+    data_parts |= Cells::DATA_PART_MOMENTUM;
+    data_parts |= Cells::DATA_PART_BONDS;
   }
+
 #ifdef COLLISION_DETECTION
   if (collision_params.mode) {
-    ghosts_have_bonds = true;
+    data_parts |= Cells::DATA_PART_BONDS;
   }
 #endif
+
+  return data_parts;
 }
 
 void update_dependent_particles() {
 #ifdef VIRTUAL_SITES
-  virtual_sites()->update(true);
+  virtual_sites()->update();
+  cells_update_ghosts(global_ghost_flags());
 #endif
-  cells_update_ghosts();
 
 #ifdef ELECTROSTATICS
   Coulomb::update_dependent_particles();

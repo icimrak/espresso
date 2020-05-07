@@ -36,7 +36,6 @@ class CoulombCloudWall(ut.TestCase):
     """
 
     S = espressomd.System(box_l=[1.0, 1.0, 1.0])
-    S.seed = S.cell_system.get_state()['n_nodes'] * [1234]
 
     forces = {}
     tolerance = 1E-3
@@ -76,51 +75,22 @@ class CoulombCloudWall(ut.TestCase):
                 p.f / prefactor - self.forces[p.id])
         force_abs_diff /= len(self.S.part)
 
-        print(method_name, "force difference", force_abs_diff)
-
         # Energy
         if energy:
-            energy_abs_diff = abs(self.S.analysis.energy()["total"] / prefactor
-                                  - self.reference_energy)
-            print(method_name, "energy difference", energy_abs_diff)
-            self.assertLessEqual(
-                energy_abs_diff,
-                self.tolerance,
-                "Absolute energy difference " +
-                str(energy_abs_diff) +
-                " too large for " +
-                method_name)
+            self.assertAlmostEqual(
+                self.S.analysis.energy()["total"] / prefactor,
+                self.reference_energy, delta=self.tolerance,
+                msg="Absolute energy difference too large for " + method_name)
         self.assertLessEqual(
-            force_abs_diff,
-            self.tolerance,
-            "Absolute force difference " +
-            str(force_abs_diff) +
-            " too large for method " +
-            method_name)
+            force_abs_diff, self.tolerance,
+            "Absolute force difference too large for method " + method_name)
 
     # Tests for individual methods
 
     @utx.skipIfMissingFeatures(["P3M"])
-    def test_p3m_direct_caf(self):
+    def test_p3m_direct(self):
         """
-        This checks P3M with using the charge assignment
-        function (window function) directly by setting the
-        `inter` parameter to zero.
-
-        """
-
-        self.S.actors.add(
-            espressomd.electrostatics.P3M(
-                prefactor=3, r_cut=1.001, accuracy=1e-3,
-                mesh=64, cao=7, alpha=2.70746, tune=False, inter=0))
-        self.S.integrator.run(0)
-        self.compare("p3m", energy=True, prefactor=3)
-
-    @utx.skipIfMissingFeatures(["P3M"])
-    def test_p3m_interpolated_caf(self):
-        """
-        This checks P3M with using an interpolated charge assignment
-        function (window function), which is the default.
+        This checks P3M.
 
         """
 

@@ -22,8 +22,10 @@
 #ifndef SCRIPT_INTERFACE_OBSERVABLES_LBPROFILEOBSERVABLE_HPP
 #define SCRIPT_INTERFACE_OBSERVABLES_LBPROFILEOBSERVABLE_HPP
 
-#include "auto_parameters/AutoParameters.hpp"
+#include "script_interface/auto_parameters/AutoParameters.hpp"
 
+#include <boost/range/algorithm.hpp>
+#include <iterator>
 #include <memory>
 
 #include "Observable.hpp"
@@ -35,27 +37,39 @@ namespace Observables {
 template <typename CoreLBObs>
 class LBProfileObservable
     : public AutoParameters<LBProfileObservable<CoreLBObs>, Observable> {
+  using Base = AutoParameters<LBProfileObservable<CoreLBObs>, Observable>;
+
 public:
   static_assert(
       std::is_base_of<::Observables::LBProfileObservable, CoreLBObs>::value,
       "");
+  using Base::Base;
   LBProfileObservable() {
     this->add_parameters(
         {{"n_x_bins",
           [this](const Variant &v) {
-            profile_observable()->n_x_bins = get_value<int>(v);
+            profile_observable()->n_x_bins =
+                static_cast<size_t>(get_value<int>(v));
           },
-          [this]() { return profile_observable()->n_x_bins; }},
+          [this]() {
+            return static_cast<int>(profile_observable()->n_x_bins);
+          }},
          {"n_y_bins",
           [this](const Variant &v) {
-            profile_observable()->n_y_bins = get_value<int>(v);
+            profile_observable()->n_y_bins =
+                static_cast<size_t>(get_value<int>(v));
           },
-          [this]() { return profile_observable()->n_y_bins; }},
+          [this]() {
+            return static_cast<int>(profile_observable()->n_y_bins);
+          }},
          {"n_z_bins",
           [this](const Variant &v) {
-            profile_observable()->n_z_bins = get_value<int>(v);
+            profile_observable()->n_z_bins =
+                static_cast<size_t>(get_value<int>(v));
           },
-          [this]() { return profile_observable()->n_z_bins; }},
+          [this]() {
+            return static_cast<int>(profile_observable()->n_z_bins);
+          }},
          {"min_x",
           [this](const Variant &v) {
             profile_observable()->min_x = get_value<double>(v);
@@ -136,13 +150,13 @@ public:
 
   Variant call_method(std::string const &method,
                       VariantMap const &parameters) override {
-    if (method == "calculate") {
-      return profile_observable()->operator()();
+    if (method == "edges") {
+      std::vector<Variant> variant_edges;
+      boost::copy(profile_observable()->edges(),
+                  std::back_inserter(variant_edges));
+      return variant_edges;
     }
-    if (method == "n_values") {
-      return profile_observable()->n_values();
-    }
-    return {};
+    return Base::call_method(method, parameters);
   }
 
   std::shared_ptr<::Observables::Observable> observable() const override {

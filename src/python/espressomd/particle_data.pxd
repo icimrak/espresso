@@ -16,20 +16,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from espressomd.system cimport *
 # Here we create something to handle particles
-cimport numpy as np
-from espressomd.utils cimport Vector4d, Vector3d, Vector3i, List, Span
-from espressomd.utils import array_locked
+from .utils cimport Vector4d, Vector3d, Vector3i, Span
 from libcpp cimport bool
-from libcpp.memory cimport unique_ptr
+from libcpp.vector cimport vector  # import std::vector as vector
 from libc cimport stdint
 
 include "myconfig.pxi"
 
-# Import particle data structures and setter functions from particle_data.hpp
+from .utils cimport Span
 
+# Import particle data structures and setter functions from particle_data.hpp
 cdef extern from "particle_data.hpp":
+    cppclass BondView:
+        int bond_id()
+        Span[const int] partner_ids()
+
     # DATA STRUCTURES
     stdint.uint8_t ROTATION_X
     stdint.uint8_t ROTATION_Y
@@ -65,8 +67,7 @@ cdef extern from "particle_data.hpp":
         particle_momentum m
         particle_force f
         particle_local l
-        List[int] bl
-        List[int] exclusions() except +
+        vector[int] exclusions() except +
         Vector3d calc_dip()
 
     IF ENGINE:
@@ -86,8 +87,6 @@ cdef extern from "particle_data.hpp":
 
     void set_particle_f(int part, const Vector3d & F)
 
-    void set_particle_solvation(int part, double * solvation)
-
     IF ROTATION:
         void set_particle_rotation(int part, int rot)
 
@@ -104,8 +103,8 @@ cdef extern from "particle_data.hpp":
     void set_particle_q(int part, double q)
 
     IF LB_ELECTROHYDRODYNAMICS:
-        void set_particle_mu_E(int part, double mu_E[3])
-        void get_particle_mu_E(int part, double (& mu_E)[3])
+        void set_particle_mu_E(int part, const Vector3d & mu_E)
+        void get_particle_mu_E(int part, Vector3d & mu_E)
 
     void set_particle_type(int part, int type)
 
@@ -117,16 +116,8 @@ cdef extern from "particle_data.hpp":
         void set_particle_omega_lab(int part, Vector3d omega)
         void set_particle_omega_body(int part, Vector3d omega)
         void set_particle_torque_lab(int part, Vector3d torque)
-        void set_particle_torque_body(int part, Vector3d torque)
         void pointer_to_omega_body(const particle * p, const double * & res)
         Vector3d get_torque_body(const particle p)
-
-    IF MEMBRANE_COLLISION:
-        void set_particle_out_direction(int part, double out_direction[3])
-        void pointer_to_out_direction(particle * p, double * & res)
-
-    IF MASS:
-        void pointer_to_mass(particle * p, double * & res)
 
     IF DIPOLES:
         void set_particle_dip(int part, double dip[3])
@@ -179,6 +170,7 @@ cdef extern from "particle_data.hpp":
     void delete_particle_bond(int part, Span[const int] bond)
     void delete_particle_bonds(int part)
     void add_particle_bond(int part, Span[const int] bond)
+    const vector[BondView] & get_particle_bonds(int part)
 
     IF EXCLUSIONS:
         int change_exclusion(int part, int part2, int _delete)
@@ -200,13 +192,10 @@ cdef extern from "particle_data.hpp":
 
     const particle & get_particle_data(int id) except +
 
-# This ugly function is only needed because of a bug in cython:
-# c.f. https://github.com/cython/cython/blob/f568e1463e4dc9d45325713cce740ace182d7874/Cython/Utility/ModuleSetupCode.c#L424
-# c.f. https://github.com/cython/cython/issues/1519
-# It was fixed in cython 0.26, once we require that version, we can remove
-# this.
-cdef inline const particle * get_particle_data_ptr(const particle & p):
-    return & p
+    vector[int] get_particle_ids() except +
+
+    int get_maximal_particle_id()
+    int get_n_part()
 
 cdef extern from "virtual_sites.hpp":
     IF VIRTUAL_SITES_RELATIVE == 1:

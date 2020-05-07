@@ -56,7 +56,7 @@ inline void velocity_verlet_propagate_vel_pos(const ParticleRange &particles) {
             Utils::sqr(p.r.p[1] - p.l.p_old[1]) +
             Utils::sqr(p.r.p[2] - p.l.p_old[2]) >
         skin2)
-      set_resort_particles(Cells::RESORT_LOCAL);
+      cell_structure.set_resort_particles(Cells::RESORT_LOCAL);
   }
 }
 
@@ -67,11 +67,10 @@ inline void
 velocity_verlet_propagate_vel_final(const ParticleRange &particles) {
 
   for (auto &p : particles) {
-#ifdef VIRTUAL_SITES
     // Virtual sites are not propagated during integration
     if (p.p.is_virtual)
       continue;
-#endif
+
     for (int j = 0; j < 3; j++) {
       if (!(p.p.ext_flag & COORD_FIXED(j))) {
         /* Propagate velocity: v(t+dt) = v(t+0.5*dt) + 0.5*dt * a(t+dt) */

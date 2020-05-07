@@ -36,7 +36,7 @@ struct Distance {
       : vec21(vec21), dist2(vec21.norm2()) {}
 
   Utils::Vector3d vec21;
-  const double dist2;
+  double dist2;
 };
 
 namespace detail {
@@ -45,17 +45,6 @@ struct MinimalImageDistance {
 
   Distance operator()(Particle const &p1, Particle const &p2) const {
     return Distance(get_mi_vector(p1.r.p, p2.r.p, box));
-  }
-};
-
-struct LayeredMinimalImageDistance {
-  const BoxGeometry box;
-
-  Distance operator()(Particle const &p1, Particle const &p2) const {
-    auto mi_dist = get_mi_vector(p1.r.p, p2.r.p, box);
-    mi_dist[2] = p1.r.p[2] - p2.r.p[2];
-
-    return Distance(mi_dist);
   }
 };
 
@@ -89,14 +78,6 @@ void decide_distance(CellIterator first, CellIterator last,
         std::forward<VerletCriterion>(verlet_criterion),
         cell_structure.use_verlet_list, rebuild_verletlist);
     break;
-  case CELL_STRUCTURE_LAYERED:
-    Algorithm::for_each_pair(
-        first, last, std::forward<ParticleKernel>(particle_kernel),
-        std::forward<PairKernel>(pair_kernel),
-        LayeredMinimalImageDistance{box_geo},
-        std::forward<VerletCriterion>(verlet_criterion),
-        cell_structure.use_verlet_list, rebuild_verletlist);
-    break;
   }
 }
 
@@ -116,7 +97,7 @@ void short_range_loop(ParticleKernel &&particle_kernel,
                       const VerletCriterion &verlet_criterion = {}) {
   ESPRESSO_PROFILER_CXX_MARK_FUNCTION;
 
-  assert(get_resort_particles() == Cells::RESORT_NONE);
+  assert(cell_structure.get_resort_particles() == Cells::RESORT_NONE);
 
   if (cell_structure.min_range != INACTIVE_CUTOFF) {
     auto first =
@@ -130,7 +111,7 @@ void short_range_loop(ParticleKernel &&particle_kernel,
 
     rebuild_verletlist = false;
   } else {
-    for (auto &p : cell_structure.local_cells().particles()) {
+    for (auto &p : cell_structure.local_particles()) {
       particle_kernel(p);
     }
   }

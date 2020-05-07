@@ -26,8 +26,9 @@
 #include "config.hpp"
 #include "errorhandling.hpp"
 #include "event.hpp"
+#include "grid.hpp"
 #include "integrate.hpp"
-#include "rotation.hpp"
+#include "particle_data.hpp"
 #include "statistics.hpp"
 
 #include <utils/constants.hpp>

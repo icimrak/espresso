@@ -19,8 +19,8 @@
 #ifndef SCRIPT_INTERFACE_AUTO_PARAMETERS_AUTO_PARAMETERS_HPP
 #define SCRIPT_INTERFACE_AUTO_PARAMETERS_AUTO_PARAMETERS_HPP
 
-#include "AutoParameter.hpp"
-#include "ScriptInterfaceBase.hpp"
+#include "script_interface/ScriptInterfaceBase.hpp"
+#include "script_interface/auto_parameters/AutoParameter.hpp"
 
 #include <unordered_map>
 #include <vector>
@@ -118,7 +118,7 @@ public:
     valid_params.clear();
 
     for (auto const &p : m_parameters) {
-      valid_params.push_back(p.first);
+      valid_params.emplace_back(p.first);
     }
 
     return valid_params;

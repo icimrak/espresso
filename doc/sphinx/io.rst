@@ -119,6 +119,13 @@ For additional methods of the checkpointing class, see :class:`espressomd.checkp
 Writing H5MD-files
 ------------------
 
+.. note::
+
+    Requires ``H5MD`` external feature, enabled with ``-DWITH_HDF5=ON``. Also
+    requires a parallel version of HDF5. On Ubuntu, this can be installed via
+    either ``libhdf5-openmpi-dev`` for OpenMPI or ``libhdf5-mpich-dev`` for
+    MPICH, but not ``libhdf5-dev`` which is the serial version.
+
 For large amounts of data it's a good idea to store it in the hdf5 (H5MD
 is based on hdf5) file format (see https://www.hdfgroup.org/ for
 details). Currently |es| supports some basic functions for writing simulation

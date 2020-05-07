@@ -21,9 +21,12 @@
 
 #include "config.hpp"
 
-#include <utils/List.hpp>
+#include "BondList.hpp"
+
 #include <utils/Vector.hpp>
 #include <utils/math/quaternion.hpp>
+
+#include <boost/serialization/vector.hpp>
 
 #include <cstdint>
 
@@ -72,11 +75,6 @@ struct ParticleProperties {
   Utils::Vector3d rinertia = {1., 1., 1.};
 #else
   static constexpr Utils::Vector3d rinertia = {1., 1., 1.};
-#endif
-
-#ifdef MEMBRANE_COLLISION
-  /** parameters for membrane collision mechanisms */
-  Utils::Vector3d out_direction = {0., 0., 0.};
 #endif
 
   /** bitfield for the particle axes of rotation */
@@ -175,6 +173,57 @@ struct ParticleProperties {
 #ifdef ENGINE
   ParticleParametersSwimming swim;
 #endif
+
+  template <class Archive> void serialize(Archive &ar, long int /* version */) {
+    ar &identity;
+    ar &mol_id;
+    ar &type;
+#ifdef MASS
+    ar &mass;
+#endif /* MASS */
+#ifdef ROTATIONAL_INERTIA
+    ar &rinertia;
+#endif
+#ifdef ROTATION
+    ar &rotation;
+#endif
+#ifdef ELECTROSTATICS
+    ar &q;
+#endif
+
+#ifdef LB_ELECTROHYDRODYNAMICS
+    ar &mu_E;
+#endif
+#ifdef DIPOLES
+    ar &dipm;
+#endif
+
+#ifdef VIRTUAL_SITES
+    ar &is_virtual;
+#ifdef VIRTUAL_SITES_RELATIVE
+    ar &vs_relative;
+#endif
+#endif /* VIRTUAL_SITES */
+
+#ifdef LANGEVIN_PER_PARTICLE
+    ar &T;
+    ar &gamma;
+#ifdef ROTATION
+    ar &gamma_rot;
+#endif
+#endif // LANGEVIN_PER_PARTICLE
+#ifdef EXTERNAL_FORCES
+    ar &ext_flag;
+    ar &ext_force;
+#ifdef ROTATION
+    ar &ext_torque;
+#endif
+#endif
+
+#ifdef ENGINE
+    ar &swim;
+#endif
+  }
 };
 
 /** Positional information on a particle. Information that is
@@ -197,6 +246,16 @@ struct ParticlePosition {
   /** particle position at the previous time step */
   Utils::Vector3d p_old = {0., 0., 0.};
 #endif
+
+  template <class Archive> void serialize(Archive &ar, long int /* version */) {
+    ar &p;
+#ifdef ROTATION
+    ar &quat;
+#endif
+#ifdef BOND_CONSTRAINT
+    ar &p_old;
+#endif
+  }
 };
 
 /** Force information on a particle. Forces of ghost particles are
@@ -231,6 +290,13 @@ struct ParticleForce {
   /** torque */
   Utils::Vector3d torque = {0., 0., 0.};
 #endif
+
+  template <class Archive> void serialize(Archive &ar, long int /* version */) {
+    ar &f;
+#ifdef ROTATION
+    ar &torque;
+#endif
+  }
 };
 
 /** Momentum information on a particle. Information not contained in
@@ -245,6 +311,13 @@ struct ParticleMomentum {
       ALWAYS IN PARTICLE FIXED, I.E., CO-ROTATING COORDINATE SYSTEM */
   Utils::Vector3d omega = {0., 0., 0.};
 #endif
+
+  template <class Archive> void serialize(Archive &ar, long int /* version */) {
+    ar &v;
+#ifdef ROTATION
+    ar &omega;
+#endif
+  }
 };
 
 /** Information on a particle that is needed only on the
@@ -257,10 +330,16 @@ struct ParticleLocal {
   Utils::Vector3d p_old = {0, 0, 0};
   /** index of the simulation box image where the particle really sits. */
   Utils::Vector3i i = {0, 0, 0};
+
+  template <class Archive> void serialize(Archive &ar, long int /* version */) {
+    ar &ghost;
+    ar &p_old;
+    ar &i;
+  }
 };
 
 /** Struct holding all information for one particle. */
-struct Particle {
+struct Particle { // NOLINT(bugprone-exception-escape)
   int &identity() { return p.identity; }
   int const &identity() const { return p.identity; }
 
@@ -270,28 +349,6 @@ struct Particle {
 
   bool operator!=(Particle const &rhs) const {
     return identity() != rhs.identity();
-  }
-
-  /**
-   * @brief Return a copy of the particle with
-   *        only the fixed size parts.
-   *
-   * This creates a copy of the particle with
-   * only the parts than can be copied w/o heap
-   * allocation, e.g. w/o bonds and exclusions.
-   * This is more efficient if these parts are
-   * not actually needed.
-   */
-  Particle flat_copy() const {
-    Particle ret;
-
-    ret.p = p;
-    ret.r = r;
-    ret.m = m;
-    ret.f = f;
-    ret.l = l;
-
-    return ret;
   }
 
   ///
@@ -308,39 +365,52 @@ struct Particle {
   ///
   ParticleLocal l;
 
-  /** Bonded interactions list
-   *
-   *  The format is pretty simple: just the bond type, and then the particle
-   *  ids. The number of particle ids can be determined easily from the
-   *  bonded_ia_params entry for the type.
-   */
-  IntList bl;
+private:
+  BondList bl;
 
-  IntList &bonds() { return bl; }
-  IntList const &bonds() const { return bl; }
+public:
+  auto &bonds() { return bl; }
+  auto const &bonds() const { return bl; }
 
-  IntList &exclusions() {
-#ifdef EXCLUSIONS
-    return el;
-#else
-    throw std::runtime_error{"Exclusions not enabled."};
-#endif
-  }
-
-  IntList const &exclusions() const {
-#ifdef EXCLUSIONS
-    return el;
-#else
-    throw std::runtime_error{"Exclusions not enabled."};
-#endif
-  }
-
+private:
 #ifdef EXCLUSIONS
   /** list of particles, with which this particle has no nonbonded
    *  interactions
    */
-  IntList el;
+
+  std::vector<int> el;
 #endif
+
+public:
+  std::vector<int> &exclusions() {
+#ifdef EXCLUSIONS
+    return el;
+#else
+    throw std::runtime_error{"Exclusions not enabled."};
+#endif
+  }
+
+  std::vector<int> const &exclusions() const {
+#ifdef EXCLUSIONS
+    return el;
+#else
+    throw std::runtime_error{"Exclusions not enabled."};
+#endif
+  }
+
+private:
+  friend boost::serialization::access;
+  template <class Archive> void serialize(Archive &ar, long int /* version */) {
+    ar &p;
+    ar &r;
+    ar &m;
+    ar &f;
+    ar &l;
+    ar &bl;
+#ifdef EXCLUSIONS
+    ar &el;
+#endif
+  }
 };
 
 #endif

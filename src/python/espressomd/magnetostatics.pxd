@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 include "myconfig.pxi"
 
-
 IF DIPOLES == 1:
     cdef extern from "communication.hpp":
         void mpi_bcast_coulomb_params()
@@ -54,7 +53,6 @@ IF DIPOLES == 1:
     IF(DIPOLAR_BARNES_HUT == 1):
         cdef extern from "actor/DipolarBarnesHut.hpp":
             void activate_dipolar_barnes_hut(float epssq, float itolsq)
-            # void activate_dipolar_barnes_hut()
             void deactivate_dipolar_barnes_hut()
 
 IF DP3M == 1:
@@ -65,14 +63,10 @@ IF DP3M == 1:
         void dp3m_set_tune_params(double r_cut, int mesh, int cao, double alpha, double accuracy, int n_interpol)
         int dp3m_set_mesh_offset(double x, double y, double z)
         int dp3m_set_eps(double eps)
-        int dp3m_set_ninterpol(int n)
         int dp3m_adaptive_tune(char ** log)
         int dp3m_deactivate()
 
         ctypedef struct dp3m_data_struct:
             P3MParameters params
 
-        # links intern C-struct with python object
         cdef extern dp3m_data_struct dp3m
-
-        # Convert C arguments into numpy array

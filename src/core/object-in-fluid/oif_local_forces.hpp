@@ -30,14 +30,10 @@
 #include "Particle.hpp"
 #include "bonded_interactions/bonded_interaction_data.hpp"
 #include "grid.hpp"
-//<<<<<<< HEAD
-//#include "particle_data.hpp"
-//=======
 #include <utils/Vector.hpp>
-//>>>>>>> espressomd/python
 #include <utils/math/triangle_functions.hpp>
 
-/** Set parameters for OIF local forces */
+// set parameters for local forces
 int oif_local_forces_set_params(int bond_type, double r0, double ks,
                                 double kslin, double phi0, double kb,
                                 double A01, double A02, double kal,
@@ -58,24 +54,6 @@ inline double KS(double lambda) {
  *  @param iaparams     Bonded parameters for the OIF interaction.
  *  @return forces on @p p1, @p p2, @p p3, @p p4
  */
-//<<<<<<< HEAD
-//inline int calc_oif_local(Particle *p2, Particle *p1, Particle *p3,
-//                          Particle *p4, Bonded_ia_parameters *iaparams,
-//                          double force[3], double force2[3], double force3[3],
-//                          double force4[3]) // first-fold-then-the-same approach
-//{
-//  auto const fp2 = unfolded_position(*p2);
-//  auto const fp1 = fp2 + get_mi_vector(p1->r.p, fp2);
-//  auto const fp3 = fp2 + get_mi_vector(p3->r.p, fp2);
-//  auto const fp4 = fp2 + get_mi_vector(p4->r.p, fp2);
-
-//  for (int i = 0; i < 3; i++) {
-//    force[i] = 0;
-//    force2[i] = 0;
-//    force3[i] = 0;
-//    force4[i] = 0;
-//  }
-//=======
 inline std::tuple<Utils::Vector3d, Utils::Vector3d, Utils::Vector3d,
                   Utils::Vector3d>
 calc_oif_local(Particle const &p2, Particle const &p1, Particle const &p3,
@@ -96,7 +74,6 @@ calc_oif_local(Particle const &p2, Particle const &p1, Particle const &p3,
 
 
   Utils::Vector3d force1{}, force2{}, force3{}, force4{};
-//>>>>>>> espressomd/python
 
   // non-linear stretching
   if (iaparams.p.oif_local_forces.ks > TINY_OIF_ELASTICITY_COEFFICIENT) {
@@ -160,19 +137,6 @@ calc_oif_local(Particle const &p2, Particle const &p1, Particle const &p3,
     force3 -= f;
   }
 
-//<<<<<<< HEAD
-  /* bending
-     implemented according to updated expressions in book Computational Blood Cell Mechanics, by I.Cimrak and I.Jancigova, see errata...*/
-//  if (iaparams->p.oif_local_forces.kb > TINY_OIF_ELASTICITY_COEFFICIENT) {
-    // how fp1 - fp4 correspond to points A,B,C,D from the book, Figure A.1:
-     //    fp1 -> C
-     //    fp2 -> A
-     //    fp3 -> B
-     //    fp4 -> D
-    
-//    auto const Nc = Utils::get_n_triangle(fp1, fp2, fp3);    // returns (fp2 - fp1)x(fp3 - fp1), thus Nc = (A - C)x(B - C)  
-//    auto const Nd = Utils::get_n_triangle(fp4, fp3, fp2);    // returns (fp3 - fp4)x(fp2 - fp4), thus Nd = (B - D)x(A - D)  
-//=======
   /* bending
      forceT1 is restoring force for triangle p1,p2,p3 and force2T restoring
      force for triangle p2,p3,p4 p1 += forceT1; p2 -= 0.5*forceT1+0.5*forceT2;
@@ -185,13 +149,11 @@ calc_oif_local(Particle const &p2, Particle const &p1, Particle const &p3,
      //    fp4 -> D
     auto const Nc = Utils::get_n_triangle(fp1, fp2, fp3);    // returns (fp2 - fp1)x(fp3 - fp1), thus Nc = (A - C)x(B - C)  
     auto const Nd = Utils::get_n_triangle(fp4, fp3, fp2);    // returns (fp3 - fp4)x(fp2 - fp4), thus Nd = (B - D)x(A - D)  
-//>>>>>>> espressomd/python
 
     auto const phi = Utils::angle_btw_triangles(fp1, fp2, fp3, fp4);
     auto const aa = (phi - iaparams.p.oif_local_forces
                                .phi0); // no renormalization by phi0, to be
                                        // consistent with Krueger and Fedosov
-//<<<<<<< HEAD
     auto const BminA = fp3 - fp2;
     auto const fac = iaparams.p.oif_local_forces.kb * aa;
     auto const factorFaNc = (fp2 - fp3) * (fp1 - fp3) / BminA.norm() / Nc.norm2();
@@ -199,21 +161,11 @@ calc_oif_local(Particle const &p2, Particle const &p1, Particle const &p3,
     auto const factorFbNc = (fp2 - fp3) * (fp2 - fp1) / BminA.norm() / Nc.norm2();
     auto const factorFbNd = (fp2 - fp3) * (fp2 - fp4) / BminA.norm() / Nd.norm2();
     
-//    for (int i = 0; i < 3; i++) {
-//      force[i] -= fac * BminA.norm()/Nc.norm2() * Nc[i];                // Fc
-//      force2[i] +=  fac * (factorFaNc * Nc[i] + factorFaNd * Nd[i]);    // Fa
-//      force3[i] +=  fac * (factorFbNc * Nc[i] + factorFbNd * Nd[i]);    // Fb
-//      force4[i] -= fac * BminA.norm()/Nd.norm2() * Nd[i];               // Fd
-//    }
-//=======
-//    auto const fac = iaparams.p.oif_local_forces.kb * aa;
-//    auto const f = 0.5 * fac * n1 + 0.5 * fac * n2;
 
     force1 -= fac * BminA.norm()/Nc.norm2() * Nc;
     force2 += fac * (factorFaNc * Nc + factorFaNd * Nd);
     force3 += fac * (factorFbNc * Nc + factorFbNd * Nd);
     force4 -= fac * BminA.norm()/Nd.norm2() * Nd;
-//>>>>>>> espressomd/python
   }
 
   /* local area

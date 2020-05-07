@@ -20,19 +20,17 @@ include "myconfig.pxi"
 
 cimport numpy as np
 import numpy as np
-from . cimport utils
-from espressomd.utils cimport *
 from . cimport particle_data
 from .interactions import BondedInteraction
 from .interactions import BondedInteractions
 from .interactions cimport bonded_ia_params
 from copy import copy
-from globals cimport max_seen_particle, time_step, n_part, n_rigidbonds, max_seen_particle_type, swimming_particles_exist, FIELD_SWIMMING_PARTICLES_EXIST, mpi_bcast_parameter
+from .globals cimport max_seen_particle_type, n_rigidbonds
 import collections
 import functools
-import types
-from espressomd.utils import nesting_level, array_locked, is_valid_type
-from espressomd.utils cimport make_array_locked
+from .utils import nesting_level, array_locked, is_valid_type
+from .utils cimport make_array_locked, make_const_span, check_type_or_throw_except
+from .utils cimport Vector3i, Vector3d, Vector4d
 from .grid cimport box_geo, folded_position, unfolded_position
 
 
@@ -56,7 +54,7 @@ cdef class ParticleHandle:
         self._id = _id
 
     cdef int update_particle_data(self) except -1:
-        self.particle_data = get_particle_data_ptr(get_particle_data(self._id))
+        self.particle_data = &get_particle_data(self._id)
 
     def __str__(self):
         res = collections.OrderedDict()
@@ -90,7 +88,6 @@ cdef class ParticleHandle:
         The particle type for nonbonded interactions.
 
         type : :obj:`int`
-            Nonbonded interactions act between different types of particles.
 
         .. note::
            The value of ``type`` has to be an integer >= 0.
@@ -113,10 +110,11 @@ cdef class ParticleHandle:
         The molecule id of the Particle.
 
         mol_id : :obj:`int`
-            The particle ``mol_id`` is used to differentiate between
-            particles belonging to different molecules, e.g. when virtual
-            sites are used, or object-in-fluid cells. The default
-            ``mol_id`` for all particles is 0.
+
+        The particle ``mol_id`` is used to differentiate between
+        particles belonging to different molecules, e.g. when virtual
+        sites are used, or object-in-fluid cells. The default
+        ``mol_id`` for all particles is 0.
 
         .. note::
            The value of ``mol_id`` has to be an integer >= 0.
@@ -139,7 +137,6 @@ cdef class ParticleHandle:
         The unwrapped (not folded into central box) particle position.
 
         pos : (3,) array_like of :obj:`float`
-            The particles' absolute position.
 
         """
 
@@ -156,14 +153,13 @@ cdef class ParticleHandle:
 
         def __get__(self):
             self.update_particle_data()
-            return make_array_locked(unfolded_position( < Vector3d > self.particle_data.r.p, < Vector3i > self.particle_data.l.i, box_geo.length()))
+            return make_array_locked(unfolded_position(< Vector3d > self.particle_data.r.p, < Vector3i > self.particle_data.l.i, box_geo.length()))
 
     property pos_folded:
         """
         The wrapped (folded into central box) position vector of a particle.
 
         pos : (3,) array_like of :obj:`float`
-            The particles' position.
 
         .. note::
            Setting the folded position is ambiguous and is thus not possible, please use ``pos``.
@@ -222,7 +218,6 @@ cdef class ParticleHandle:
         The particle velocity in the lab frame.
 
         v : (3,) array_like of :obj:`float`
-            The particles' velocity
 
         .. note::
            The velocity remains variable and will be changed during integration.
@@ -247,7 +242,6 @@ cdef class ParticleHandle:
         The instantaneous force acting on this particle.
 
         f : (3,) array_like of :obj:`float`
-            The current forces on the particle
 
         .. note::
            Whereas the velocity is modified with respect to the velocity you set
@@ -274,9 +268,10 @@ cdef class ParticleHandle:
         one partner. You need to define a bonded interaction.
 
         bonds : list/tuple of tuples/lists
-            a bond tuple is specified as a bond identifier associated with
-            a particle ``(bond_ID, part_ID)``. A single particle may contain
-            multiple such tuples.
+
+        A bond tuple is specified as a bond identifier associated with
+        a particle ``(bond_ID, part_ID)``. A single particle may contain
+        multiple such tuples.
 
         See Also
         --------
@@ -306,25 +301,17 @@ cdef class ParticleHandle:
                         "Bonds have to specified as lists of tuples/lists or a single list.")
 
         def __get__(self):
-            self.update_particle_data()
             bonds = []
+
+            part_bonds = get_particle_bonds(self._id)
             # Go through the bond list of the particle
-            i = 0
-            while i < self.particle_data.bl.n:
+            for part_bond in part_bonds:
                 bond = []
-                # Bond type:
-                bond_id = self.particle_data.bl.e[i]
-                bond.append(BondedInteractions()[bond_id])
-                # Number of partners
-                nPartners = bonded_ia_params[bond_id].num
+                bond.append(BondedInteractions()[part_bond.bond_id()])
+                partner_ids = part_bond.partner_ids()
 
-                i += 1
-
-                # Copy bond partners
-                for j in range(nPartners):
-                    bond.append(self.particle_data.bl.e[i])
-                    i += 1
-                bonds.append(tuple(bond))
+                bonds.append(tuple(bond + [partner_ids[i]
+                                           for i in range(partner_ids.size())]))
 
             return tuple(bonds)
 
@@ -343,7 +330,6 @@ cdef class ParticleHandle:
         Particle mass.
 
         mass : :obj:`float`
-               The particle mass.
 
         See Also
         ----------
@@ -370,7 +356,6 @@ cdef class ParticleHandle:
             The particle angular velocity the lab frame.
 
             omega_lab : (3,) array_like of :obj:`float`
-                The particle's angular velocity measured from the lab frame.
 
             .. note::
                This needs the feature ``ROTATION``.
@@ -402,11 +387,9 @@ cdef class ParticleHandle:
 
         property quat:
             """
-            Particle quaternion representation.
+            Quaternion representation of the particle rotational position.
 
             quat : (4,) array_like of :obj:`float`
-                Sets the quaternion representation of the
-                rotational position of this particle.
 
             .. note::
                This needs the feature ``ROTATION``.
@@ -544,25 +527,6 @@ cdef class ParticleHandle:
                     self.particle_data, rinertia)
                 return array_locked([rinertia[0], rinertia[1], rinertia[2]])
 
-    IF MEMBRANE_COLLISION:
-        property out_direction:
-            """OIF Outward direction"""
-
-            def __set__(self, _out_direction):
-                cdef double out_direction[3]
-                check_type_or_throw_except(
-                    _out_direction, 3, float, "out_direction has to be 3 floats")
-                for i in range(3):
-                    out_direction[i] = _out_direction[i]
-                set_particle_out_direction(self.id, out_direction)
-
-            def __get__(self):
-                self.update_particle_data()
-                cdef const double * out_direction = NULL
-                pointer_to_out_direction(self.particle_data, out_direction)
-                return np.array(
-                    [out_direction[0], out_direction[1], out_direction[2]])
-
     # Charge
     property q:
         """
@@ -605,22 +569,17 @@ cdef class ParticleHandle:
             """
 
             def __set__(self, mu_E):
-                cdef double _mu_E[3]
-
+                cdef Vector3d _mu_E
                 check_type_or_throw_except(
                     mu_E, 3, float, "mu_E has to be 3 floats.")
-
-                _mu_E[0] = mu_E[0]
-                _mu_E[1] = mu_E[1]
-                _mu_E[2] = mu_E[2]
-
+                for i in range(3):
+                    _mu_E[i] = mu_E[i]
                 set_particle_mu_E(self._id, _mu_E)
 
             def __get__(self):
-                cdef double mu_E[3]
-                get_particle_mu_E(self._id, mu_E)
-
-                return array_locked([mu_E[0], mu_E[1], mu_E[2]])
+                cdef Vector3d _mu_E
+                get_particle_mu_E(self._id, _mu_E)
+                return make_array_locked(_mu_E)
 
     property virtual:
         """Virtual flag.
@@ -820,13 +779,13 @@ cdef class ParticleHandle:
             """
             Fixes the particle motion in the specified cartesian directions.
 
-            fix : (3,) array_like of :obj:`int`
+            fix : (3,) array_like of :obj:`bool`
 
-            Fixes the particle in space. By supplying a set of 3 integers as
+            Fixes the particle in space. By supplying a set of 3 bools as
             arguments it is possible to fix motion in x, y, or z coordinates
             independently. For example::
 
-                part[<INDEX>].fix = [0, 0, 1]
+                part[<INDEX>].fix = [False, False, True]
 
             will fix motion for particle with index ``INDEX`` only in z.
 
@@ -838,7 +797,7 @@ cdef class ParticleHandle:
             def __set__(self, _fixed_coord_flag):
                 cdef stdint.uint8_t ext_flag = 0
                 check_type_or_throw_except(
-                    _fixed_coord_flag, 3, int, "Fix has to be 3 ints.")
+                    _fixed_coord_flag, 3, int, "Fix has to be 3 bools.")
                 for i in map(long, range(3)):
                     if _fixed_coord_flag[i]:
                         ext_flag |= _COORD_FIXED(i)
@@ -905,7 +864,7 @@ cdef class ParticleHandle:
                     cdef Vector3d gamma
 
                     # We accept a single number by just repeating it
-                    if not isinstance(_gamma, collections.Iterable):
+                    if not isinstance(_gamma, collections.abc.Iterable):
                         _gamma = 3 * [_gamma]
 
                     check_type_or_throw_except(
@@ -963,7 +922,8 @@ cdef class ParticleHandle:
                     def __set__(self, _gamma_rot):
                         cdef Vector3d gamma_rot
                         # We accept a single number by just repeating it
-                        if not isinstance(_gamma_rot, collections.Iterable):
+                        if not isinstance(
+                                _gamma_rot, collections.abc.Iterable):
                             _gamma_rot = 3 * [_gamma_rot]
 
                         check_type_or_throw_except(
@@ -1094,12 +1054,7 @@ cdef class ParticleHandle:
 
             def __get__(self):
                 self.update_particle_data()
-                cdef List[int] exclusions = self.particle_data.exclusions()
-
-                py_partners = []
-                for i in range(exclusions.n):
-                    py_partners.append(exclusions.e[i])
-                return array_locked(py_partners)
+                return array_locked(self.particle_data.exclusions())
 
         def add_exclusion(self, _partner):
             """
@@ -1199,8 +1154,8 @@ cdef class ParticleHandle:
             """
 
             def __set__(self, _params):
-                global swimming_particles_exist
                 cdef particle_parameters_swimming swim
+
                 swim.swimming = True
                 swim.v_swim = 0.0
                 swim.f_swim = 0.0
@@ -1242,10 +1197,6 @@ cdef class ParticleHandle:
                         check_type_or_throw_except(
                             _params['dipole_length'], 1, float, "dipole_length has to be a float.")
                         swim.dipole_length = _params['dipole_length']
-
-                if swim.f_swim != 0 or swim.v_swim != 0:
-                    swimming_particles_exist = True
-                    mpi_bcast_parameter(FIELD_SWIMMING_PARTICLES_EXIST)
 
                 set_particle_swimming(self._id, swim)
 
@@ -1340,11 +1291,11 @@ cdef class ParticleHandle:
         """
         Checks the validity of the given bond:
 
-            - If the bondtype is given as an object or a numerical id
-            - If all partners are of type :obj:`int`
-            - If the number of partners satisfies the bond
-            - If the bond type used exists (is lower than ``n_bonded_ia``)
-            - If the number of bond partners fits the bond type
+        - If the bondtype is given as an object or a numerical id
+        - If all partners are of type :obj:`int`
+        - If the number of partners satisfies the bond
+        - If the bond type used exists (is lower than ``n_bonded_ia``)
+        - If the number of bond partners fits the bond type
 
         Throws an exception if any of these are not met.
 
@@ -1441,7 +1392,8 @@ cdef class ParticleHandle:
 
         Parameters
         ----------
-        _bond : bond to be deleted
+        _bond :
+            bond to be deleted
 
         See Also
         --------
@@ -1549,8 +1501,8 @@ cdef class _ParticleSliceImpl:
     """Handles slice inputs.
 
     This base class should not be used directly. Use
-    :class:`espressomd.ParticleSlice` instead, which contains all the particle
-    properties.
+    :class:`espressomd.particle_data.ParticleSlice` instead, which contains
+    all the particle properties.
 
     """
 
@@ -1585,7 +1537,7 @@ cdef class _ParticleSliceImpl:
 
         # We start with a full list of possible particle ids and then
         # remove ids of non-existing particles
-        id_list = np.arange(max_seen_particle + 1, dtype=int)
+        id_list = np.arange(get_maximal_particle_id() + 1, dtype=int)
         id_list = id_list[slice_]
 
         # Generate a mask which will remove ids of non-existing particles
@@ -1692,7 +1644,7 @@ cdef class _ParticleSliceImpl:
 
         See Also
         --------
-        add
+        :meth:`espressomd.particle_data.ParticleList.add`
 
         """
         for id in self.id_selection:
@@ -1702,7 +1654,7 @@ cdef class _ParticleSliceImpl:
 class ParticleSlice(_ParticleSliceImpl):
 
     """
-    Handles slice inputs e.g. part[0:2]. Sets values for selected slices or
+    Handles slice inputs e.g. ``part[0:2]``. Sets values for selected slices or
     returns values as a single list.
 
     """
@@ -1716,8 +1668,8 @@ class ParticleSlice(_ParticleSliceImpl):
 
 cdef class ParticleList:
     """
-    Provides access to the particles via [i], where i is the particle id.
-    Returns a :class:`ParticleHandle` object.
+    Provides access to the particles via ``[i]``, where ``i`` is the particle
+    id. Returns a :class:`espressomd.particle_data.ParticleHandle` object.
 
     """
 
@@ -1734,13 +1686,18 @@ cdef class ParticleList:
     # __getstate__ and __setstate__ define the pickle interaction
     def __getstate__(self):
         """Attributes to pickle.
-        Content of particle_attributes, minus a few exceptions dip, director:
-        Setting only the director will overwrite the orientation of the
-        particle around the axis parallel to dipole moment/director.
-        Quaternions contain the full info id: The particle id is used as the
-        storage key when pickling all particles via ParticleList, and the
-        interface (rightly) does not support changing of the id after the
-        particle was created.
+
+        Content of ``particle_attributes``, minus a few exceptions:
+
+        - :attr:`~ParticleHandle.dip`, :attr:`~ParticleHandle.director`:
+          Setting only the director will overwrite the orientation of the
+          particle around the axis parallel to dipole moment/director.
+          Quaternions contain the full info.
+        - :attr:`~ParticleHandle.id`: The particle id is used as the
+          storage key when pickling all particles via :class:`ParticleList`,
+          and the interface (rightly) does not support changing of the id
+          after the particle was created.
+        - :attr:`~ParticleHandle.image_box`, :attr:`~ParticleHandle.node`
 
         """
 
@@ -1775,7 +1732,7 @@ cdef class ParticleList:
                 self[pid].exclusions = exclusions[pid]
 
     def __len__(self):
-        return n_part
+        return get_n_part()
 
     def add(self, *args, **kwargs):
         """
@@ -1836,7 +1793,7 @@ cdef class ParticleList:
         # Handling of particle id
         if "id" not in P:
             # Generate particle id
-            P["id"] = max_seen_particle + 1
+            P["id"] = get_maximal_particle_id() + 1
         else:
             if particle_exists(P["id"]):
                 raise Exception("Particle %d already exists." % P["id"])
@@ -1880,21 +1837,28 @@ Set quat and scalar dipole moment (dipm) instead.")
             raise ValueError(
                 "When adding several particles at once, all lists of attributes have to have the same size")
 
-        # Place new particles and collect ids
-        ids = []
+        # If particle ids haven't been provided, use free ones
+        # beyond the highest existing one
+        if not "id" in Ps:
+            first_id = get_maximal_particle_id() + 1
+            Ps["id"] = range(first_id, first_id + n_parts)
+
+        # Place the particles
         for i in range(n_parts):
             P = {}
             for k in Ps:
                 P[k] = Ps[k][i]
-            ids.append(self._place_new_particle(P).id)
+            self._place_new_particle(P)
 
-        return self[ids]
+        # Return slice of added particles
+        return self[Ps["id"]]
 
     # Iteration over all existing particles
     def __iter__(self):
-        for i in range(max_seen_particle + 1):
-            if particle_exists(i):
-                yield self[i]
+        ids = get_particle_ids()
+
+        for i in ids:
+            yield self[i]
 
     def exists(self, idx):
         if is_valid_type(idx, int):
@@ -1919,12 +1883,7 @@ Set quat and scalar dipole moment (dipm) instead.")
         remove_all_particles()
 
     def __str__(self):
-        res = ""
-        for i in range(max_seen_particle + 1):
-            if self.exists(i):
-                res += str(self[i]) + ", "
-        # Remove final comma
-        return "ParticleList([" + res[:-2] + "])"
+        return "ParticleList([" + ",".join(get_particle_ids()) + "])"
 
     def writevtk(self, fname, types='all'):
         """
@@ -1993,7 +1952,7 @@ Set quat and scalar dipole moment (dipm) instead.")
         """
 
         def __get__(self):
-            return max_seen_particle
+            return get_maximal_particle_id()
 
     property n_part_types:
         """
@@ -2013,27 +1972,16 @@ Set quat and scalar dipole moment (dipm) instead.")
         def __get__(self):
             return n_rigidbonds
 
-    # property max_part:
-    #     def __get__(self):
-    #         return max_seen_particle
-
-    # # property n_part:
-    #     def __get__(self):
-    #         return n_part
-
     def pairs(self):
         """
         Generator returns all pairs of particles.
 
         """
 
-        cdef int i
-        cdef int j
-        for i in range(max_seen_particle + 1):
-            for j in range(i + 1, max_seen_particle + 1, 1):
-                if not (particle_exists(i) and particle_exists(j)):
-                    continue
+        ids = get_particle_ids()
 
+        for i in ids:
+            for j in ids[i + 1:]:
                 yield (self[i], self[j])
 
     def select(self, *args, **kwargs):

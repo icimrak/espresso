@@ -39,7 +39,6 @@
 #include "Particle.hpp"
 #include "ParticleList.hpp"
 
-#include <utils/List.hpp>
 #include <utils/Span.hpp>
 #include <utils/Vector.hpp>
 
@@ -72,97 +71,16 @@ enum {
 #endif
 
 /************************************************
- * exported variables
- ************************************************/
-
-/** Highest particle number seen so far. If you leave out some
- *  particle numbers, this number might be higher than the
- *  true number of particles. On the other hand, if you start
- *  your particle numbers at 0, the total number of particles
- *  is larger by 1.
- */
-extern int max_seen_particle;
-/** total number of particles on all nodes. */
-extern int n_part;
-/** flag that active swimming particles exist */
-extern bool swimming_particles_exist;
-
-/** id->particle mapping on all nodes. This is used to find partners
- *  of bonded interactions.
- */
-extern std::vector<Particle *> local_particles;
-
-/************************************************
  * Functions
  ************************************************/
 
-/*       Functions acting on Particles          */
-/************************************************/
-
-/** Deallocate the dynamic storage of a particle. */
-void free_particle(Particle *part);
-
-/*    Functions acting on Particle Lists        */
-/************************************************/
-
-/** Append a particle at the end of a particle list.
- *  Reallocate particles if necessary!
- *  This procedure does not care for \ref local_particles.
- *  \param l List to append the particle to.
- *  \param part  Particle to append.
- */
-void append_unindexed_particle(ParticleList *l, Particle &&part);
-
-/** Append a particle at the end of a particle list.
- *  Reallocate particles if necessary!
- *  This procedure cares for \ref local_particles.
- *  \param plist List to append the particle to.
- *  \param part  Particle to append.
- *  \return Pointer to new location of the particle.
- */
-Particle *append_indexed_particle(ParticleList *plist, Particle &&part);
-
-/** Remove a particle from one particle list and append it to another.
- *  Refill the @p sourceList with last particle and update its entry in
- *  local_particles. Reallocate particles if necessary. This
- *  procedure does not care for \ref local_particles.
- *  \param destList   List where the particle is appended.
- *  \param sourceList List where the particle will be removed.
- *  \param ind        Index of the particle in the @p sourceList.
- *  \return Pointer to new location of the particle.
- */
-Particle *move_unindexed_particle(ParticleList *destList,
-                                  ParticleList *sourceList, int ind);
-
-/** Remove a particle from one particle list and append it to another.
- *  Refill the @p sourceList with last particle and update its entry in
- *  local_particles. Reallocate particles if necessary. This
- *  procedure cares for \ref local_particles.
- *  \param destList   List where the particle is appended.
- *  \param sourceList List where the particle will be removed.
- *  \param ind        Index of the particle in the @p sourceList.
- *  \return Pointer to new location of the particle.
- */
-Particle *move_indexed_particle(ParticleList *destList,
-                                ParticleList *sourceList, int ind);
-
-Particle extract_indexed_particle(ParticleList *sl, int i);
-
 /*    Other Functions                           */
 /************************************************/
-
-/** Update the entries in \ref local_particles for all particles in the list pl.
- *  @param pl the list to put in.
- */
-void update_local_particles(ParticleList *pl);
 
 /** Invalidate \ref particle_node. This has to be done
  *  at the beginning of the integration.
  */
 void clear_particle_node();
-
-/** Realloc \ref local_particles. */
-void realloc_local_particles(int part);
 
 /**
  * @brief Get particle data.
@@ -176,15 +94,24 @@ const Particle &get_particle_data(int part);
 /**
  * @brief Fetch a range of particle into the fetch cache.
  *
+ *
  * If the range is larger than the cache size, only
  * the particle that fit into the cache are fetched.
  *
+ * The particles have to exist, an exception it throw
+ * if one of the the particles can not be found.
+ *
  * @param ids Ids of the particles that should be fetched.
  */
-void prefetch_particle_data(std::vector<int> ids);
+void prefetch_particle_data(Utils::Span<const int> ids);
 
 /** @brief Invalidate the fetch cache for get_particle_data. */
 void invalidate_fetch_cache();
+
+/** @brief Return the maximal number of particles that are
+ *         kept in the fetch cache.
+ */
+size_t fetch_cache_max_size();
 
 /** Call only on the master node.
  *  Move a particle to a new position.
@@ -247,14 +174,6 @@ void set_particle_rotation(int part, int rot);
  */
 void rotate_particle(int part, const Utils::Vector3d &axis, double angle);
 
-#ifdef MEMBRANE_COLLISION
-/** Call only on the master node: set particle out_direction.
- *  @param part the particle.
- *  @param out_direction its new outward direction with respect to membrane.
- */
-void set_particle_out_direction(int part, double *out_direction);
-#endif
-
 /** Call only on the master node: set particle charge.
  *  @param part the particle.
  *  @param q its new charge.
@@ -266,8 +185,8 @@ void set_particle_q(int part, double q);
  *  @param part the particle.
  *  @param mu_E its new mobility.
  */
-void set_particle_mu_E(int part, double *mu_E);
-void get_particle_mu_E(int part, double (&mu_E)[3]);
+void set_particle_mu_E(int part, Utils::Vector3d const &mu_E);
+void get_particle_mu_E(int part, Utils::Vector3d &mu_E);
 #endif
 
 /** Call only on the master node: set particle type.
@@ -401,6 +320,8 @@ void delete_particle_bonds(int part);
  */
 void add_particle_bond(int part, Utils::Span<const int> bond);
 
+const std::vector<BondView> &get_particle_bonds(int part);
+
 #ifdef EXCLUSIONS
 /** Call only on the master node: change particle constraints.
  *  @param part     identity of particle for which the exclusion is set.
@@ -429,11 +350,6 @@ int remove_particle(int part);
 /** Remove all particles. */
 void remove_all_particles();
 
-/** For all local particles, remove bonds incorporating the specified particle.
- *  @param part     identity of the particle to free from bonds
- */
-void remove_all_bonds_to(int part);
-
 /** Used by \ref mpi_place_particle, should not be used elsewhere.
  *  Move a particle to a new position. If it does not exist, it is created.
  *  The position must be on the local node!
@@ -446,12 +362,6 @@ void remove_all_bonds_to(int part);
  */
 Particle *local_place_particle(int id, const Utils::Vector3d &pos, int _new);
 
-/** Used by \ref mpi_place_particle, should not be used elsewhere.
- *  Called if on a different node a new particle was added.
- *  @param part the identity of the particle added
- */
-void added_particle(int part);
-
 /** Used for example by \ref mpi_send_exclusion.
  *  Locally add an exclusion to a particle.
  *  @param part1 the identity of the first exclusion partner
@@ -460,64 +370,12 @@ void added_particle(int part);
  */
 void local_change_exclusion(int part1, int part2, int _delete);
 
-/** Used by \ref mpi_remove_particle, should not be used elsewhere.
- *  Remove a particle on this node.
- *  @param part the identity of the particle to remove
- */
-void local_remove_particle(int part);
-
-/** Used by \ref mpi_remove_particle, should not be used elsewhere.
- *  Locally remove all particles.
- */
-void local_remove_all_particles();
-
 /** Used by \ref mpi_rescale_particles, should not be used elsewhere.
  *  Locally rescale all particles on current node.
  *  @param dir   direction to scale (0/1/2 = x/y/z, 3 = x+y+z isotropically)
  *  @param scale factor by which to rescale (>1: stretch, <1: contract)
  */
 void local_rescale_particles(int dir, double scale);
-
-/** @brief Add bond to local particle.
- *  @param p     identity of principal atom of the bond.
- *  @param bond  field containing the bond type number and the identity
- *               of all bond partners (secondary atoms of the bond).
- */
-void local_add_particle_bond(Particle &p, Utils::Span<const int> bond);
-
-/** Synchronous send of a particle buffer to another node.
- *  The other node MUST call \ref recv_particles when this is called.
- *  The particles data is freed.
- */
-void send_particles(ParticleList *particles, int node);
-
-/** Synchronous receive of a particle buffer from another node.
- *  The other node MUST call \ref send_particles when this is called.
- *  Particles needs to initialized, it is reallocated to the correct
- *  size and the content is overwritten.
- */
-void recv_particles(ParticleList *particles, int node);
-
-#ifdef EXCLUSIONS
-/** Determine if the non-bonded interactions between @p p1 and @p p2 should be
- *  calculated.
- */
-inline bool do_nonbonded(Particle const &p1, Particle const &p2) {
-  /* check for particle 2 in particle 1's exclusion list. The exclusion list is
-   * symmetric, so this is sufficient. */
-  return std::none_of(p1.el.begin(), p1.el.end(),
-                      [&p2](int id) { return p2.p.identity == id; });
-}
-#endif
-
-/** Remove bond from particle if possible */
-int try_delete_bond(Particle *part, const int *bond);
-
-/** Remove exclusion from particle if possible */
-void try_delete_exclusion(Particle *part, int part2);
-
-/** Insert an exclusion if not already set */
-void try_add_exclusion(Particle *part, int part2);
 
 /** Automatically add the next \<distance\> neighbors in each molecule to the
  *  exclusion list.
@@ -589,10 +447,6 @@ void pointer_to_swimming(Particle const *p,
 void pointer_to_rotational_inertia(Particle const *p, double const *&res);
 #endif
 
-#ifdef MEMBRANE_COLLISION
-void pointer_to_out_direction(const Particle *p, const double *&res);
-#endif
-
 /**
  * @brief Check if particle exists.
  *
@@ -608,5 +462,22 @@ bool particle_exists(int part);
  *  @return The MPI rank the particle is on.
  */
 int get_particle_node(int id);
+
+/**
+ * @brief Get all particle ids.
+ *
+ * @return Sorted ids of all existing particles.
+ */
+std::vector<int> get_particle_ids();
+
+/**
+ * @brief Get maximal particle id.
+ */
+int get_maximal_particle_id();
+
+/**
+ * @brief Get number of particles.
+ */
+int get_n_part();
 
 #endif

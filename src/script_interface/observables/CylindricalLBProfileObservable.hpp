@@ -22,13 +22,15 @@
 #ifndef SCRIPT_INTERFACE_OBSERVABLES_CYLINDRICALLBPROFILEOBSERVABLE_HPP
 #define SCRIPT_INTERFACE_OBSERVABLES_CYLINDRICALLBPROFILEOBSERVABLE_HPP
 
-#include "auto_parameters/AutoParameters.hpp"
+#include "script_interface/auto_parameters/AutoParameters.hpp"
 
+#include <boost/range/algorithm.hpp>
+#include <iterator>
 #include <memory>
 
 #include "Observable.hpp"
 #include "core/observables/CylindricalLBProfileObservable.hpp"
-#include "get_value.hpp"
+#include "script_interface/get_value.hpp"
 
 namespace ScriptInterface {
 namespace Observables {
@@ -37,10 +39,14 @@ template <typename CoreCylLBObs>
 class CylindricalLBProfileObservable
     : public AutoParameters<CylindricalLBProfileObservable<CoreCylLBObs>,
                             Observable> {
+  using Base =
+      AutoParameters<CylindricalLBProfileObservable<CoreCylLBObs>, Observable>;
+
 public:
   static_assert(std::is_base_of<::Observables::CylindricalLBProfileObservable,
                                 CoreCylLBObs>::value,
                 "");
+  using Base::Base;
   CylindricalLBProfileObservable() {
     this->add_parameters({
         {"center",
@@ -57,19 +63,29 @@ public:
          [this]() { return cylindrical_profile_observable()->axis; }},
         {"n_r_bins",
          [this](const Variant &v) {
-           cylindrical_profile_observable()->n_r_bins = get_value<int>(v);
+           cylindrical_profile_observable()->n_r_bins =
+               static_cast<size_t>(get_value<int>(v));
          },
-         [this]() { return cylindrical_profile_observable()->n_r_bins; }},
+         [this]() {
+           return static_cast<int>(cylindrical_profile_observable()->n_r_bins);
+         }},
         {"n_phi_bins",
          [this](const Variant &v) {
-           cylindrical_profile_observable()->n_phi_bins = get_value<int>(v);
+           cylindrical_profile_observable()->n_phi_bins =
+               static_cast<size_t>(get_value<int>(v));
          },
-         [this]() { return cylindrical_profile_observable()->n_phi_bins; }},
+         [this]() {
+           return static_cast<int>(
+               cylindrical_profile_observable()->n_phi_bins);
+         }},
         {"n_z_bins",
          [this](const Variant &v) {
-           cylindrical_profile_observable()->n_z_bins = get_value<int>(v);
+           cylindrical_profile_observable()->n_z_bins =
+               static_cast<size_t>(get_value<int>(v));
          },
-         [this]() { return cylindrical_profile_observable()->n_z_bins; }},
+         [this]() {
+           return static_cast<int>(cylindrical_profile_observable()->n_z_bins);
+         }},
         {"min_r",
          [this](const Variant &v) {
            cylindrical_profile_observable()->min_r = get_value<double>(v);
@@ -123,13 +139,13 @@ public:
 
   Variant call_method(std::string const &method,
                       VariantMap const &parameters) override {
-    if (method == "calculate") {
-      return cylindrical_profile_observable()->operator()();
+    if (method == "edges") {
+      std::vector<Variant> variant_edges;
+      boost::copy(cylindrical_profile_observable()->edges(),
+                  std::back_inserter(variant_edges));
+      return variant_edges;
     }
-    if (method == "n_values") {
-      return cylindrical_profile_observable()->n_values();
-    }
-    return {};
+    return Base::call_method(method, parameters);
   }
 
   std::shared_ptr<::Observables::Observable> observable() const override {

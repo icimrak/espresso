@@ -14,23 +14,20 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import sys
 import unittest as ut
 import unittest_decorators as utx
 import numpy as np
 import espressomd
 import espressomd.observables
+import tests_common
 
 
 class ProfileObservablesTest(ut.TestCase):
-    system = espressomd.System(box_l=[1.0, 1.0, 1.0])
-    system.box_l = [10.0, 10.0, 10.0]
+    system = espressomd.System(box_l=[10.0, 10.0, 10.0])
     system.cell_system.skin = 0.1
     system.time_step = 0.01
     system.part.add(id=0, pos=[4.0, 4.0, 6.0], v=[0.0, 0.0, 1.0])
     system.part.add(id=1, pos=[4.0, 4.0, 6.0], v=[0.0, 0.0, 1.0])
-    flat_index = np.ravel_multi_index((0, 0, 1), (2, 2, 2))
-    flat_index_3d = np.ravel_multi_index((0, 0, 1, 2), (2, 2, 2, 3))
     bin_volume = 5.0**3
     kwargs = {'ids': [0, 1],
               'n_x_bins': 2,
@@ -45,10 +42,27 @@ class ProfileObservablesTest(ut.TestCase):
 
     def test_density_profile(self):
         density_profile = espressomd.observables.DensityProfile(**self.kwargs)
-        self.assertEqual(density_profile.calculate()[
-                         self.flat_index], 2.0 / self.bin_volume)
-        self.assertEqual(density_profile.n_values(),
+        obs_data = density_profile.calculate()
+        obs_edges = density_profile.call_method("edges")
+        obs_bin_edges = density_profile.bin_edges()
+        obs_bin_centers = density_profile.bin_centers()
+        np_hist, np_edges = tests_common.get_histogram(
+            np.copy(self.system.part[:].pos), self.kwargs, 'cartesian',
+            normed=True)
+        np_hist *= len(self.system.part)
+        np.testing.assert_array_almost_equal(obs_data, np_hist)
+        for i in range(3):
+            np.testing.assert_array_almost_equal(obs_edges[i], np_edges[i])
+        self.assertEqual(np.prod(obs_data.shape),
                          self.kwargs['n_x_bins'] * self.kwargs['n_y_bins'] * self.kwargs['n_z_bins'])
+        np.testing.assert_array_almost_equal(
+            obs_bin_edges[0, 0, 0],
+            [self.kwargs['min_x'], self.kwargs['min_y'], self.kwargs['min_z']])
+        np.testing.assert_array_almost_equal(
+            obs_bin_edges[-1, -1, -1],
+            [self.kwargs['max_x'], self.kwargs['max_y'], self.kwargs['max_z']])
+        np.testing.assert_array_almost_equal(obs_bin_centers[0, 0, 0],
+                                             [2.5, 2.5, 2.5])
 
     @utx.skipIfMissingFeatures("EXTERNAL_FORCES")
     def test_force_density_profile(self):
@@ -57,24 +71,20 @@ class ProfileObservablesTest(ut.TestCase):
         self.system.part[0].ext_force = [0.0, 0.0, 1.0]
         self.system.part[1].ext_force = [0.0, 0.0, 1.0]
         self.system.integrator.run(0)
-        self.assertEqual(density_profile.calculate()[
-                         self.flat_index_3d], 2.0 / self.bin_volume)
-        self.assertEqual(density_profile.n_values(),
+        obs_data = density_profile.calculate()
+        self.assertEqual(obs_data[0, 0, 1, 2], 2.0 / self.bin_volume)
+        self.assertEqual(np.prod(obs_data.shape),
                          3 * self.kwargs['n_x_bins'] * self.kwargs['n_y_bins'] * self.kwargs['n_z_bins'])
 
     def test_flux_density_profile(self):
         density_profile = espressomd.observables.FluxDensityProfile(
             **self.kwargs)
         self.system.integrator.run(0)
-        self.assertEqual(density_profile.calculate()[
-                         self.flat_index_3d], 2.0 / self.bin_volume)
-        self.assertEqual(density_profile.n_values(),
+        obs_data = density_profile.calculate()
+        self.assertEqual(obs_data[0, 0, 1, 2], 2.0 / self.bin_volume)
+        self.assertEqual(np.prod(obs_data.shape),
                          3 * self.kwargs['n_x_bins'] * self.kwargs['n_y_bins'] * self.kwargs['n_z_bins'])
 
 
 if __name__ == '__main__':
-    suite = ut.TestSuite()
-    suite.addTests(ut.TestLoader().loadTestsFromTestCase(
-        ProfileObservablesTest))
-    result = ut.TextTestRunner(verbosity=4).run(suite)
-    sys.exit(not result.wasSuccessful())
+    ut.main()

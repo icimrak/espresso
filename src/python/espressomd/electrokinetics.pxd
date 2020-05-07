@@ -17,8 +17,6 @@
 include "myconfig.pxi"
 from libcpp cimport bool
 
-from .utils cimport Vector3i
-
 IF ELECTROKINETICS and CUDA:
     cdef extern from "grid_based_algorithms/electrokinetics.hpp":
 
@@ -81,10 +79,8 @@ IF ELECTROKINETICS and CUDA:
         cdef extern EK_parameters ek_parameters
 
         # EK functions
-        void ek_integrate()
         void ek_print_parameters()
         void ek_print_lbpar()
-        void lb_set_ek_pointer(EK_parameters * pointeradress)
         unsigned int ek_calculate_boundary_mass()
         int ek_print_vtk_density(int species, char * filename)
         int ek_print_vtk_flux(int species, char * filename)
@@ -95,20 +91,19 @@ IF ELECTROKINETICS and CUDA:
         int ek_lb_print_vtk_density(char * filename)
         int ek_lb_print_vtk_velocity(char * filename)
         int ek_init()
-        int ek_set_agrid(double agrid)
-        int ek_set_lb_density(double lb_density)
-        int ek_set_viscosity(double viscosity)
-        int ek_set_friction(double friction)
-        int ek_set_T(double T)
-        int ek_set_prefactor(double prefactor)
-        int ek_set_bulk_viscosity(double bulk_viscosity)
-        int ek_set_gamma_odd(double gamma_odd)
-        int ek_set_gamma_even(double gamma_even)
-        int ek_set_lb_force_density(double * ext_force_density)
-        int ek_set_density(int species, double density)
-        int ek_set_D(int species, double D)
-        int ek_set_valency(int species, double valency)
-        int ek_set_ext_force_density(int species, double ext_force_density_x, double ext_force_density_y, double ext_force_density_z)
+        int ek_set_agrid(float agrid)
+        int ek_set_lb_density(float lb_density)
+        int ek_set_viscosity(float viscosity)
+        int ek_set_friction(float friction)
+        int ek_set_T(float T)
+        int ek_set_prefactor(float prefactor)
+        int ek_set_bulk_viscosity(float bulk_viscosity)
+        int ek_set_gamma_odd(float gamma_odd)
+        int ek_set_gamma_even(float gamma_even)
+        int ek_set_density(int species, float density)
+        int ek_set_D(int species, float D)
+        int ek_set_valency(int species, float valency)
+        int ek_set_ext_force_density(int species, float ext_force_density_x, float ext_force_density_y, float ext_force_density_z)
         int ek_set_stencil(int stencil)
         int ek_set_advection(bool advection)
         int ek_set_fluctuations(bool fluctuations)
@@ -125,8 +120,4 @@ IF ELECTROKINETICS and CUDA:
         int ek_load_checkpoint(char * filename)
 
         int ek_set_electrostatics_coupling(bool electrostatics_coupling)
-        void ek_calculate_electrostatic_coupling()
         int ek_print_vtk_particle_potential(char * filename)
-
-        IF EK_BOUNDARIES:
-            void ek_init_species_density_wallcharge(ekfloat * wallcharge_species_density, int wallcharge_species)

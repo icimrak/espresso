@@ -22,38 +22,6 @@ import numpy as np
 from libcpp.vector cimport vector
 include "myconfig.pxi"
 
-
-cdef np.ndarray create_nparray_from_int_list(const List[int] & il):
-    """
-    Returns a numpy array from an int list struct which is provided as argument.
-
-    Parameters
-    ----------
-    List[int] : List[int]* which is to be converted
-
-    """
-    numpyArray = np.zeros(il.size())
-    for i in range(il.size()):
-        numpyArray[i] = il[i]
-    return numpyArray
-
-cdef List[int] create_int_list_from_python_object(obj):
-    """
-    Returns a int list pointer from a python object which supports subscripts.
-
-    Parameters
-    ----------
-    obj : python object which supports subscripts
-
-    """
-    cdef List[int] il
-    il.resize(len(obj))
-
-    for i in range(len(obj)):
-        il[i] = obj[i]
-
-    return il
-
 cpdef check_type_or_throw_except(x, n, t, msg):
     """
     Checks that x is of type t and that n values are given, otherwise throws
@@ -302,7 +270,8 @@ def is_valid_type(value, t):
 
 
 def requires_experimental_features(reason):
-    """Class decorator which makes instantiation conditional on EXPERIMENTAL_FEATURES being defined in myconfig.hpp."""
+    """Class decorator which makes instantiation conditional on
+    ``EXPERIMENTAL_FEATURES`` being defined in myconfig.hpp."""
 
     def exception_raiser(self, *args, **kwargs):
         raise Exception(

@@ -19,16 +19,19 @@
 #
 
 # Target for the unit tests
-add_custom_target(check_unit_tests COMMAND ${CMAKE_CTEST_COMMAND} --timeout ${TEST_TIMEOUT} $(ARGS) --output-on-failure)
+add_custom_target(
+  check_unit_tests COMMAND ${CMAKE_CTEST_COMMAND} --timeout ${TEST_TIMEOUT}
+                           $(ARGS) --output-on-failure)
 
 if(WITH_TESTS)
   # Run unit tests on check
   add_dependencies(check check_unit_tests)
 endif(WITH_TESTS)
 
+add_subdirectory(utils)
+add_subdirectory(shapes)
 add_subdirectory(core)
 add_subdirectory(config)
-add_subdirectory(utils)
 
 add_subdirectory(profiler)
 

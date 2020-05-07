@@ -19,11 +19,15 @@
 #ifndef _BONDED_INTERACTION_DATA_HPP
 #define _BONDED_INTERACTION_DATA_HPP
 
-#include <boost/optional.hpp>
-
+#include "CellStructure.hpp"
 #include "Particle.hpp"
 #include "TabulatedPotential.hpp"
-#include <utils/Counter.hpp>
+
+#include <utils/Span.hpp>
+
+#include <boost/algorithm/cxx11/any_of.hpp>
+#include <boost/optional.hpp>
+#include <boost/range/algorithm/transform.hpp>
 
 /** @file
  *  Data structures for bonded interactions.
@@ -33,11 +37,10 @@
 /** \name Type codes of bonded interactions
  *  Enumeration of implemented bonded interactions.
  */
-enum BondedInteraction {
+enum BondedInteraction : int {
   /** This bonded interaction was not set. */
   BONDED_IA_NONE = -1,
-  /** Type of bonded interaction is a FENE potential
-      (to be combined with Lennard-Jones). */
+  /** Type of bonded interaction is a FENE potential */
   BONDED_IA_FENE,
   /** Type of bonded interaction is a harmonic potential. */
   BONDED_IA_HARMONIC,
@@ -57,8 +60,6 @@ enum BondedInteraction {
   BONDED_IA_TABULATED_ANGLE,
   /** Type of bonded interaction is a tabulated dihedral potential. */
   BONDED_IA_TABULATED_DIHEDRAL,
-  /** Type of bonded interaction is a subtracted-LJ potential. */
-  BONDED_IA_SUBT_LJ,
   /** Type of bonded interaction is a rigid/constrained bond. */
   BONDED_IA_RIGID_BOND,
   /** Type of bonded interaction is a virtual bond. */
@@ -73,10 +74,6 @@ enum BondedInteraction {
   BONDED_IA_OIF_LOCAL_FORCES,
   /** Type of bonded interaction: OIF global forces. */
   BONDED_IA_OIF_GLOBAL_FORCES,
-  /** Type of bonded interaction: determining outward direction of OIF membrane
-   *  (not associated to a parameter struct).
-   */
-  BONDED_IA_OIF_OUT_DIRECTION,
   /** Type of bonded interaction is a wall repulsion (immersed boundary). */
   BONDED_IA_IBM_TRIEL,
   /** Type of bonded interaction is volume conservation force (immersed
@@ -110,6 +107,8 @@ struct Fene_bond_parameters {
   double drmax2;
   /** inverse square of @p drmax (internal parameter) */
   double drmax2i;
+
+  double cutoff() const { return r0 + drmax; }
 };
 
 /** Parameters for OIF global forces
@@ -128,7 +127,7 @@ struct Oif_global_forces_bond_parameters {
   double kv;
   /** cutoff bond length */
   double r_cut;
-
+  double cutoff() const { return r_cut; }
 };
 
 /** Parameters for OIF local forces
@@ -155,6 +154,7 @@ struct Oif_local_forces_bond_parameters {
   /** Viscous coefficient of the triangle vertices */
   double kvisc;
 
+  double cutoff() const { return -1.; }
 };
 
 /** Parameters for harmonic bond Potential */
@@ -165,6 +165,8 @@ struct Harmonic_bond_parameters {
   double r;
   /** cutoff bond length */
   double r_cut;
+
+  double cutoff() const { return r_cut; }
 };
 
 /** Parameters for Thermalized bond **/
@@ -178,9 +180,10 @@ struct Thermalized_bond_parameters {
   double pref2_com;
   double pref1_dist;
   double pref2_dist;
+
+  double cutoff() const { return r_cut; }
 };
 
-#ifdef ROTATION
 /** Parameters for harmonic dumbbell bond Potential */
 struct Harmonic_dumbbell_bond_parameters {
   /** spring constant */
@@ -191,26 +194,33 @@ struct Harmonic_dumbbell_bond_parameters {
   double r;
   /** cutoff bond length */
   double r_cut;
+
+  double cutoff() const { return r_cut; }
 };
-#endif
 
 /** Parameters for quartic bond Potential */
 struct Quartic_bond_parameters {
   double k0, k1;
   double r;
   double r_cut;
+
+  double cutoff() const { return r_cut; }
 };
 
 /** Parameters for %Coulomb bond Potential */
 struct Bonded_coulomb_bond_parameters {
   /** %Coulomb prefactor */
   double prefactor;
+
+  double cutoff() const { return -1.; }
 };
 
 /** Parameters for %Coulomb bond short-range Potential */
 struct Bonded_coulomb_sr_bond_parameters {
   /** charge factor */
   double q1q2;
+
+  double cutoff() const { return -1.; }
 };
 
 /** Parameters for three-body angular potential (harmonic). */
@@ -219,6 +229,8 @@ struct Angle_harmonic_bond_parameters {
   double bend;
   /** equilibrium angle (default is 180 degrees) */
   double phi0;
+
+  double cutoff() const { return -1.; }
 };
 
 /** Parameters for three-body angular potential (cosine). */
@@ -231,6 +243,8 @@ struct Angle_cosine_bond_parameters {
   double cos_phi0;
   /** sine of @p phi0 (internal parameter) */
   double sin_phi0;
+
+  double cutoff() const { return -1.; }
 };
 
 /** Parameters for three-body angular potential (cossquare). */
@@ -241,6 +255,8 @@ struct Angle_cossquare_bond_parameters {
   double phi0;
   /** cosine of @p phi0 (internal parameter) */
   double cos_phi0;
+
+  double cutoff() const { return -1.; }
 };
 
 /** Parameters for four-body angular potential (dihedral-angle potentials). */
@@ -248,24 +264,33 @@ struct Dihedral_bond_parameters {
   double mult;
   double bend;
   double phase;
+
+  double cutoff() const { return -1.; }
 };
 
 /** Parameters for n-body tabulated potential (n=2,3,4). */
 struct Tabulated_bond_parameters {
+  TabulatedBondedInteraction type;
   TabulatedPotential *pot;
+
+  double cutoff() const {
+    switch (type) {
+    case TAB_BOND_LENGTH:
+      return assert(pot), pot->cutoff();
+    default:
+      return -1.;
+    };
+  }
 };
 
-#ifdef UMBRELLA
 /** Parameters for umbrella potential */
 struct Umbrella_bond_parameters {
   double k;
   int dir;
   double r;
-};
-#endif
 
-/** Dummy parameters for subtracted-LJ Potential */
-struct Subt_lj_bond_parameters {};
+  double cutoff() const { return std::numeric_limits<double>::infinity(); }
+};
 
 /** Parameters for the rigid_bond/SHAKE/RATTLE ALGORITHM */
 struct Rigid_bond_parameters {
@@ -277,6 +302,8 @@ struct Rigid_bond_parameters {
   /**Velocity Tolerance/Accuracy for termination of RATTLE/SHAKE iterations
    * during velocity corrections */
   double v_tol;
+
+  double cutoff() const { return std::sqrt(d2); }
 };
 
 enum class tElasticLaw { NeoHookean, Skalak };
@@ -303,6 +330,8 @@ struct IBM_Triel_Parameters {
   tElasticLaw elasticLaw;
   double k1;
   double k2;
+
+  double cutoff() const { return maxDist; }
 };
 
 /** Parameters for IBM volume conservation bond **/
@@ -313,10 +342,8 @@ struct IBM_VolCons_Parameters {
   double volRef;
   /** Spring constant for volume force */
   double kappaV;
-  // Whether to write out center-of-mass at each time step
-  // Actually this is more of an analysis function and does not strictly belong
-  // to volume conservation
-  //  bool writeCOM;
+
+  double cutoff() const { return -1.; }
 };
 
 /** Parameters for IBM tribend **/
@@ -326,6 +353,12 @@ struct IBM_Tribend_Parameters {
 
   /** Reference angle */
   double theta0;
+
+  double cutoff() const { return -1.; }
+};
+
+struct VirtualBond_Parameters {
+  double cutoff() const { return -1.; }
 };
 
 /** Union in which to store the parameters of an individual bonded interaction
@@ -335,9 +368,7 @@ union Bond_parameters {
   Oif_global_forces_bond_parameters oif_global_forces;
   Oif_local_forces_bond_parameters oif_local_forces;
   Harmonic_bond_parameters harmonic;
-#ifdef ROTATION
   Harmonic_dumbbell_bond_parameters harmonic_dumbbell;
-#endif
   Quartic_bond_parameters quartic;
   Bonded_coulomb_bond_parameters bonded_coulomb;
   Bonded_coulomb_sr_bond_parameters bonded_coulomb_sr;
@@ -346,15 +377,13 @@ union Bond_parameters {
   Angle_cossquare_bond_parameters angle_cossquare;
   Dihedral_bond_parameters dihedral;
   Tabulated_bond_parameters tab;
-#ifdef UMBRELLA
   Umbrella_bond_parameters umbrella;
-#endif
   Thermalized_bond_parameters thermalized_bond;
-  Subt_lj_bond_parameters subt_lj;
   Rigid_bond_parameters rigid_bond;
   IBM_Triel_Parameters ibm_triel;
   IBM_VolCons_Parameters ibmVolConsParameters;
   IBM_Tribend_Parameters ibm_tribend;
+  VirtualBond_Parameters virt;
 };
 
 /** Defines parameters for a bonded interaction. */
@@ -377,56 +406,22 @@ extern std::vector<Bonded_ia_parameters> bonded_ia_params;
  */
 void make_bond_type_exist(int type);
 
-/** @brief Checks if particle has a pair bond with a given partner
- *  Note that bonds are stored only on one of the two particles in Espresso
+/**
+ * @brief Checks both particles for a specific bond, even on ghost particles.
  *
- * @param p          particle on which the bond may be stored
- * @param partner    bond partner
- * @param bond_type  numerical bond type
- */
-inline bool pair_bond_exists_on(Particle const &p, Particle const &partner,
-                                int bond_type) {
-  // First check the bonds of p1
-  if (p.bl.e) {
-    int i = 0;
-    while (i < p.bl.n) {
-      int size = bonded_ia_params[p.bl.e[i]].num;
-
-      if (p.bl.e[i] == bond_type && p.bl.e[i + 1] == partner.p.identity) {
-        // There's a bond, already. Nothing to do for these particles
-        return true;
-      }
-      i += size + 1;
-    }
-  }
-  return false;
-}
-
-/** @brief Checks both particles for a specific bond, even on ghost particles.
- *
- *  @param p_bond      particle on which the bond may be stored
+ *  @param p Particle to check for the bond.
  *  @param p_partner   bond partner
- *  @param bond        enum bond type
+ *  @param bond_type   enum bond type
  */
-inline bool pair_bond_enum_exists_on(Particle const &p_bond,
+inline bool pair_bond_enum_exists_on(Particle const &p,
                                      Particle const &p_partner,
-                                     BondedInteraction bond) {
-#ifdef ADDITIONAL_CHECKS
-  extern bool ghosts_have_bonds;
-  assert(ghosts_have_bonds);
-#endif
-
-  int i = 0;
-  while (i < p_bond.bl.n) {
-    int type_num = p_bond.bl.e[i];
-    Bonded_ia_parameters const &iaparams = bonded_ia_params[type_num];
-    if (iaparams.type == (int)bond &&
-        p_bond.bl.e[i + 1] == p_partner.p.identity) {
-      return true;
-    }
-    i += iaparams.num + 1;
-  }
-  return false;
+                                     BondedInteraction bond_type) {
+  return boost::algorithm::any_of(
+      p.bonds(),
+      [bond_type, partner_id = p_partner.identity()](BondView const &bond) {
+        return (bonded_ia_params[bond.bond_id()].type == bond_type) and
+               (bond.partner_ids()[0] == partner_id);
+      });
 }
 
 /** @brief Checks both particles for a specific bond, even on ghost particles.
@@ -441,11 +436,11 @@ inline bool pair_bond_enum_exists_between(Particle const &p1,
   if (&p1 == &p2)
     return false;
 
-  // Check if particles have bonds (bl.n > 0) and search for the bond of
+  // Check if particles have bonds and search for the bond of
   // interest with are_bonded(). Could be saved on both sides (and both could
   // have other bonds), so we need to check both.
-  return (p1.bl.n > 0 && pair_bond_enum_exists_on(p1, p2, bond)) ||
-         (p2.bl.n > 0 && pair_bond_enum_exists_on(p2, p1, bond));
+  return pair_bond_enum_exists_on(p1, p2, bond) or
+         pair_bond_enum_exists_on(p2, p1, bond);
 }
 
 /** Calculate the maximal cutoff of bonded interactions, required to
@@ -460,7 +455,8 @@ inline bool pair_bond_enum_exists_between(Particle const &p1,
  *  is stored is only bonded to the first two partners, one of which has an
  *  additional bond to the third partner.
  */
-double recalc_maximal_cutoff_bonded();
+double maximal_cutoff_bonded();
 
 int virtual_set_params(int bond_type);
+
 #endif

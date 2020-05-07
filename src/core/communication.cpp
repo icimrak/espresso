@@ -54,6 +54,7 @@
 #include "nonbonded_interactions/nonbonded_tab.hpp"
 #include "npt.hpp"
 #include "partCfg_global.hpp"
+#include "particle_data.hpp"
 #include "pressure.hpp"
 #include "rotation.hpp"
 #include "statistics.hpp"
@@ -65,7 +66,6 @@
 #include "electrostatics_magnetostatics/mdlc_correction.hpp"
 
 #include "serialization/IA_parameters.hpp"
-#include "serialization/Particle.hpp"
 
 #include <utils/Counter.hpp>
 #include <utils/u32_to_u64.hpp>
@@ -216,12 +216,11 @@ void mpi_init() {
 #undef CB
 
   ErrorHandling::init_error_handling(mpiCallbacks());
-  partCfg(std::make_unique<PartCfg>(mpiCallbacks(), GetLocalParts()));
 
   on_program_start();
 }
 
-/****************** REQ_PLACE/REQ_PLACE_NEW ************/
+/****************** PLACE/PLACE NEW PARTICLE ************/
 
 void mpi_place_particle(int node, int id, const Utils::Vector3d &pos) {
   mpi_call(mpi_place_particle_slave, node, id);
@@ -232,7 +231,7 @@ void mpi_place_particle(int node, int id, const Utils::Vector3d &pos) {
     comm_cart.send(node, SOME_TAG, pos);
   }
 
-  set_resort_particles(Cells::RESORT_GLOBAL);
+  cell_structure.set_resort_particles(Cells::RESORT_GLOBAL);
   on_particle_change();
 }
 
@@ -243,14 +242,12 @@ void mpi_place_particle_slave(int pnode, int part) {
     local_place_particle(part, pos, 0);
   }
 
-  set_resort_particles(Cells::RESORT_GLOBAL);
+  cell_structure.set_resort_particles(Cells::RESORT_GLOBAL);
   on_particle_change();
 }
 
 boost::optional<int> mpi_place_new_particle_slave(int part,
                                                   Utils::Vector3d const &pos) {
-  added_particle(part);
-
   auto p = local_place_particle(part, pos, 1);
 
   on_particle_change();
@@ -269,35 +266,35 @@ int mpi_place_new_particle(int id, const Utils::Vector3d &pos) {
                   id, pos);
 }
 
-/****************** REQ_REM_PART ************/
+/****************** REMOVE PARTICLE ************/
 void mpi_remove_particle(int pnode, int part) {
-  mpi_call(mpi_remove_particle_slave, pnode, part);
-  mpi_remove_particle_slave(pnode, part);
+  mpi_call_all(mpi_remove_particle_slave, pnode, part);
 }
 
 void mpi_remove_particle_slave(int pnode, int part) {
   if (part != -1) {
-    n_part--;
-
-    if (pnode == this_node) {
-      local_remove_particle(part);
-    } else {
-      remove_all_bonds_to(part);
-    }
-  } else
-    local_remove_all_particles();
+    cell_structure.remove_particle(part);
+  } else {
+    cell_structure.remove_all_particles();
+  }
 
   on_particle_change();
 }
 
-/********************* REQ_MIN_ENERGY ********/
+/********************* STEEPEST DESCENT ********/
+static int mpi_steepest_descent_slave(int steps, int) {
+  return steepest_descent(steps);
+}
+REGISTER_CALLBACK_MASTER_RANK(mpi_steepest_descent_slave)
 
-REGISTER_CALLBACK(minimize_energy)
-void mpi_minimize_energy() { mpi_call_all(minimize_energy); }
+int mpi_steepest_descent(int steps) {
+  return mpi_call(Communication::Result::master_rank,
+                  mpi_steepest_descent_slave, steps, 0);
+}
 
-/********************* REQ_INTEGRATE ********/
+/********************* INTEGRATE ********/
 static int mpi_integrate_slave(int n_steps, int reuse_forces) {
-  integrate_vv(n_steps, reuse_forces);
+  integrate(n_steps, reuse_forces);
 
   return check_runtime_errors_local();
 }
@@ -308,7 +305,7 @@ int mpi_integrate(int n_steps, int reuse_forces) {
                   mpi_integrate_slave, n_steps, reuse_forces);
 }
 
-/*************** REQ_BCAST_IA ************/
+/*************** BCAST IA ************/
 static void mpi_bcast_all_ia_params_slave() {
   boost::mpi::broadcast(comm_cart, ia_params, 0);
 }
@@ -360,14 +357,14 @@ void mpi_bcast_ia_params_slave(int i, int j) {
   on_short_range_ia_change();
 }
 
-/*************** REQ_BCAST_IA_SIZE ************/
+/*************** BCAST IA SIZE ************/
 
 REGISTER_CALLBACK(realloc_ia_params)
 void mpi_bcast_max_seen_particle_type(int ns) {
   mpi_call_all(realloc_ia_params, ns);
 }
 
-/*************** REQ_GATHER ************/
+/*************** GATHER ************/
 void mpi_gather_stats(int job, void *result, void *result_t, void *result_nb,
                       void *result_t_nb) {
   switch (job) {
@@ -443,7 +440,7 @@ void mpi_gather_stats_slave(int, int job) {
   }
 }
 
-/*************** REQ_SET_TIME_STEP ************/
+/*************** TIME STEP ************/
 void mpi_set_time_step_slave(double dt) {
   time_step = dt;
   time_step_squared = time_step * time_step;
@@ -462,7 +459,7 @@ void mpi_set_time_step(double time_s) {
   mpi_call_all(mpi_set_time_step_slave, time_s);
 }
 
-/*************** REQ_BCAST_COULOMB ************/
+/*************** BCAST COULOMB ************/
 void mpi_bcast_coulomb_params() {
 #if defined(ELECTROSTATICS) || defined(DIPOLES)
   mpi_call(mpi_bcast_coulomb_params_slave, 1, 0);
@@ -471,8 +468,6 @@ void mpi_bcast_coulomb_params() {
 }
 
 void mpi_bcast_coulomb_params_slave(int, int) {
-
-#if defined(ELECTROSTATICS) || defined(DIPOLES)
 
 #ifdef ELECTROSTATICS
   MPI_Bcast(&coulomb, sizeof(Coulomb_parameters), MPI_BYTE, 0, comm_cart);
@@ -488,11 +483,12 @@ void mpi_bcast_coulomb_params_slave(int, int) {
   Dipole::bcast_params(comm_cart);
 #endif
 
+#if defined(ELECTROSTATICS) || defined(DIPOLES)
   on_coulomb_change();
 #endif
 }
 
-/****************** REQ_RESCALE_PART ************/
+/****************** RESCALE PARTICLES ************/
 
 void mpi_rescale_particles(int dir, double scale) {
   int pnode;
@@ -515,7 +511,7 @@ void mpi_rescale_particles_slave(int, int dir) {
   on_particle_change();
 }
 
-/*************** REQ_BCAST_CS *****************/
+/*************** BCAST CELL STRUCTURE *****************/
 
 void mpi_bcast_cell_structure(int cs) {
   mpi_call(mpi_bcast_cell_structure_slave, -1, cs);
@@ -526,7 +522,7 @@ void mpi_bcast_cell_structure_slave(int, int cs) {
   cells_re_init(cs, cell_structure.min_range);
 }
 
-/*************** REQ_BCAST_NPTISO_GEOM *****************/
+/*************** BCAST NPTISO GEOM *****************/
 
 void mpi_bcast_nptiso_geom() {
   mpi_call(mpi_bcast_nptiso_geom_slave, -1, 0);
@@ -540,7 +536,7 @@ void mpi_bcast_nptiso_geom_slave(int, int) {
   MPI_Bcast(&nptiso.non_const_dim, 1, MPI_INT, 0, comm_cart);
 }
 
-/******************* REQ_BCAST_CUDA_GLOBAL_PART_VARS ********************/
+/******************* BCAST CUDA GLOBAL PART VARS ********************/
 
 void mpi_bcast_cuda_global_part_vars() {
 #ifdef CUDA
@@ -558,7 +554,7 @@ void mpi_bcast_cuda_global_part_vars_slave(int, int) {
 #endif
 }
 
-/********************* REQ_SET_EXCL ********/
+/********************* SET EXCLUSION ********/
 #ifdef EXCLUSIONS
 void mpi_send_exclusion_slave(int part1, int part2, int _delete) {
   local_change_exclusion(part1, part2, _delete);
@@ -573,47 +569,36 @@ void mpi_send_exclusion(int part1, int part2, int _delete) {
 }
 #endif
 
-/********************* REQ_ICCP3M_INIT********/
+/********************* ICCP3M INIT ********/
 #ifdef ELECTROSTATICS
 void mpi_iccp3m_init_slave(const iccp3m_struct &iccp3m_cfg_) {
-#ifdef ELECTROSTATICS
   iccp3m_cfg = iccp3m_cfg_;
 
   on_particle_charge_change();
   check_runtime_errors(comm_cart);
-#endif
 }
 
 REGISTER_CALLBACK(mpi_iccp3m_init_slave)
 
 int mpi_iccp3m_init() {
-#ifdef ELECTROSTATICS
   mpi_call(mpi_iccp3m_init_slave, iccp3m_cfg);
 
   on_particle_charge_change();
   return check_runtime_errors(comm_cart);
-#else
-  return 0;
-#endif
 }
 #endif
 
-/****************************************************/
+/********************* CALC MU MAX ********/
 
 #ifdef DP3M
 REGISTER_CALLBACK(calc_mu_max)
-#endif
 
-void mpi_bcast_max_mu() {
-#ifdef DP3M
-  mpi_call_all(calc_mu_max);
+void mpi_bcast_max_mu() { mpi_call_all(calc_mu_max); }
 #endif
-}
 
 /***** GALILEI TRANSFORM AND ASSOCIATED FUNCTIONS ****/
 void mpi_kill_particle_motion_slave(int rotation) {
-  local_kill_particle_motion(rotation,
-                             cell_structure.local_cells().particles());
+  local_kill_particle_motion(rotation, cell_structure.local_particles());
   on_particle_change();
 }
 
@@ -624,7 +609,7 @@ void mpi_kill_particle_motion(int rotation) {
 }
 
 void mpi_kill_particle_forces_slave(int torque) {
-  local_kill_particle_forces(torque, cell_structure.local_cells().particles());
+  local_kill_particle_forces(torque, cell_structure.local_particles());
   on_particle_change();
 }
 
@@ -680,6 +665,8 @@ void mpi_loop() {
 std::vector<int> mpi_resort_particles(int global_flag) {
   mpi_call(mpi_resort_particles_slave, global_flag, 0);
   cells_resort_particles(global_flag);
+
+  clear_particle_node();
 
   std::vector<int> n_parts;
   boost::mpi::gather(comm_cart, cells_get_n_particles(), n_parts, 0);

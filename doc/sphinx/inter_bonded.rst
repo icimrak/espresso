@@ -177,23 +177,6 @@ used to cancel or add **only the short-range** electrostatic part
 of the P3M solver. A use case is described in :ref:`Particle polarizability with
 thermalized cold Drude oscillators`.
 
-.. _Subtracted Lennard-Jones bond:
-
-Subtracted Lennard-Jones bond
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-:class:`espressomd.interactions.SubtLJ` can be used to exclude certain particle
-pairs from the non-bonded :ref:`Lennard-Jones interaction`::
-
-    subtLJ = espressomd.interactions.SubtLJ()
-    system.bonded_inter.add(subtLJ)
-    system.part[0].add_bond((subt, 1))
-
-This bond subtracts the type-pair specific Lennard-Jones interaction between
-the involved particles. This interaction is useful when using other bond
-potentials which already include the short-ranged repulsion. This often the
-case for force fields or in general tabulated potentials.
-
 .. _Rigid bonds:
 
 Rigid bonds
@@ -466,11 +449,6 @@ modeling objects are described in section :ref:`Object-in-fluid`.
 OIF local forces
 ~~~~~~~~~~~~~~~~
 
-.. note::
-
-    Requires ``OIF_GLOBAL_FORCES`` feature.
-
-
 OIF local forces are available through the :class:`espressomd.interactions.OifLocalForces` class.
 
 This type of interaction is available for closed 3D immersed objects flowing in the LB flow.
@@ -598,11 +576,6 @@ larger than :math:`\pi`, then the inner angle is concave.
 OIF global forces
 ~~~~~~~~~~~~~~~~~
 
-.. note::
-
-    Requires ``OIF_GLOBAL_FORCES`` feature.
-
-
 OIF global forces are available through the
 :class:`espressomd.interactions.OifGlobalForces` class.
 
@@ -668,32 +641,4 @@ defined
 Triangle 012 must have correct orientation, that is the normal vector
 defined by a vector product :math:`01\times02`. The orientation must
 point inside the immersed object.
-
-Out direction
-~~~~~~~~~~~~~
-
-OIF out direction is available through the
-:class:`espressomd.interactions.OifOutDirection` class.
-
-
-
-This type of interaction is primarily for closed 3D immersed objects to
-compute the input for membrane collision. After creating the interaction
-
-::
-
-    out_direction_interaction = OifOutDirection()
-
-it is important how the bond is created. Particles need to be mentioned
-in the correct order. Command
-
-::
-
-    p0.add_bond((out_direction_interaction, p1.part_id, p2.part_id, p3.part_id))
-
-calculates the outward normal vector of triangle defined by particles 1,
-2, 3 (these should be selected in such a way that particle 0 lies
-approximately at its centroid). In order for the direction to be outward
-with respect to the underlying object, the triangle 123 needs to be
-properly oriented (as explained in paragraph `Volume conservation`_).
 

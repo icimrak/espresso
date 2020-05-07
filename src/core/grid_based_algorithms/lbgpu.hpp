@@ -28,7 +28,7 @@
 #include "config.hpp"
 
 #ifdef CUDA
-#include <boost/optional.hpp>
+#include "OptionalCounter.hpp"
 
 #include <utils/Counter.hpp>
 #include <utils/Vector.hpp>
@@ -95,7 +95,6 @@ struct LB_parameters_gpu {
   unsigned int dim_z;
 
   unsigned int number_of_nodes;
-  unsigned int number_of_particles;
 #ifdef LB_BOUNDARIES_GPU
   unsigned int number_of_boundnodes;
 #endif
@@ -197,10 +196,6 @@ void lb_reinit_fluid_gpu();
 /** Reset the forces on the fluid nodes */
 void reset_LB_force_densities_GPU(bool buffer = true);
 
-/** (Re-)initialize the particle array */
-void lb_realloc_particles_gpu();
-void lb_realloc_particles_GPU_leftovers(LB_parameters_gpu *lbpar_gpu);
-
 void lb_init_GPU(LB_parameters_gpu *lbpar_gpu);
 void lb_integrate_GPU();
 
@@ -250,8 +245,8 @@ void lb_fluid_set_rng_state_gpu(uint64_t counter);
 uint64_t lb_coupling_get_rng_state_gpu();
 void lb_coupling_set_rng_state_gpu(uint64_t counter);
 /*@}*/
-extern boost::optional<Utils::Counter<uint64_t>> rng_counter_fluid_gpu;
-extern boost::optional<Utils::Counter<uint64_t>> rng_counter_coupling_gpu;
+extern OptionalCounter rng_counter_fluid_gpu;
+extern OptionalCounter rng_counter_coupling_gpu;
 #endif /*  CUDA */
 
 #endif /*  CUDA_H */

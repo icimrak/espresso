@@ -44,7 +44,7 @@ C++ Compiler
 
 Boost
     A number of advanced C++ features used by |es| are provided by Boost.
-    We strongly recommend to use at least boost 1.67.
+    We strongly recommend to use at least Boost 1.67.
 
 FFTW
     For some algorithms (P\ :math:`^3`\ M), |es| needs the FFTW library
@@ -91,6 +91,9 @@ are required:
     sudo apt install python3-matplotlib python3-scipy ipython3 jupyter-notebook
     sudo pip3 install 'pint>=0.9'
 
+Nvidia GPU acceleration
+"""""""""""""""""""""""
+
 If your computer has an Nvidia graphics card, you should also download and install the
 CUDA SDK to make use of GPU computation:
 
@@ -98,12 +101,18 @@ CUDA SDK to make use of GPU computation:
 
     sudo apt install nvidia-cuda-toolkit
 
-On Ubuntu 18.04, you need to modify a file to make CUDA work with the default compiler:
+On Ubuntu, the default GCC compiler is too recent for nvcc, which will generate
+compiler errors. You can either install an older version of GCC and select it
+with environment variables ``CC`` and ``CXX`` when building |es|, or edit the
+system header files as shown in the following example for Ubuntu 18.04:
 
 .. code-block:: bash
 
     sudo sed -i 's/__GNUC__ > 6/__GNUC__ > 7/g' /usr/include/crt/host_config.h
     sudo sed -i 's/than 6/than 7/g' /usr/include/crt/host_config.h
+
+AMD GPU acceleration
+""""""""""""""""""""
 
 If your computer has an AMD graphics card, you should also download and install the
 ROCm SDK to make use of GPU computation:
@@ -126,10 +135,10 @@ Installing requirements on other Linux distributions
 Please refer to the following Dockerfiles to find the minimum set of packages
 required to compile |es| on other Linux distributions:
 
-* `CentOS 7 <https://github.com/espressomd/docker/blob/master/docker/centos-python3/Dockerfile-7>`_
-* `Fedora 30 <https://github.com/espressomd/docker/blob/master/docker/centos-python3/Dockerfile-next>`_
-* `Debian 10 <https://github.com/espressomd/docker/blob/master/docker/debian-python3/Dockerfile-10>`_
-* `OpenSUSE Leap 15.1 <https://github.com/espressomd/docker/blob/master/docker/opensuse/Dockerfile-15.1>`_
+* `CentOS <https://github.com/espressomd/docker/blob/master/docker/Dockerfile-centos>`_
+* `Fedora <https://github.com/espressomd/docker/blob/master/docker/Dockerfile-fedora>`_
+* `Debian <https://github.com/espressomd/docker/blob/master/docker/Dockerfile-debian>`_
+* `OpenSUSE <https://github.com/espressomd/docker/blob/master/docker/Dockerfile-opensuse>`_
 
 
 .. _Installing requirements on Mac OS X:
@@ -217,12 +226,6 @@ Installing packages using Homebrew
     brew link --force cython
     pip install PyOpenGL matplotlib
 
-Installing CUDA
-"""""""""""""""
-
-If your Mac has an Nvidia graphics card, you should also download and install the
-CUDA SDK [6]_ to make use of GPU computation.
-
 .. _Quick installation:
 
 Quick installation
@@ -284,6 +287,230 @@ invocation is implementation dependent, but in many cases, such as
     mpirun -n <N> ./pypresso <SCRIPT>
 
 where ``<N>`` is the number of processors to be used.
+
+
+.. _Features:
+
+Features
+--------
+
+This chapter describes the features that can be activated in |es|. Even if
+possible, it is not recommended to activate all features, because this
+will negatively effect |es|'s performance.
+
+Features can be activated in the configuration header :file:`myconfig.hpp` (see
+section :ref:`myconfig.hpp\: Activating and deactivating features`). To
+activate ``FEATURE``, add the following line to the header file:
+
+.. code-block:: c++
+
+    #define FEATURE
+
+
+.. _General features:
+
+General features
+^^^^^^^^^^^^^^^^
+
+-  ``ELECTROSTATICS`` This enables the use of the various electrostatics algorithms, such as P3M.
+
+   .. seealso:: :ref:`Electrostatics`
+
+-  ``MMM1D_GPU``
+
+-  ``_P3M_GPU_FLOAT``
+
+
+-  ``DIPOLES`` This activates the dipole-moment property of particles; In addition,
+   the various magnetostatics algorithms, such as P3M are switched on.
+
+   .. seealso::
+
+       :ref:`Magnetostatics / Dipolar interactions`
+       :ref:`Electrostatics`
+
+-  ``SCAFACOS_DIPOLES``
+
+-  ``ROTATION`` Switch on rotational degrees of freedom for the particles, as well as
+   the corresponding quaternion integrator.
+
+   .. seealso:: :ref:`Setting up particles`
+
+   .. note::
+      When this feature is activated, every particle has three
+      additional degrees of freedom, which for example means that the
+      kinetic energy changes at constant temperature is twice as large.
+
+-  ``LANGEVIN_PER_PARTICLE`` Allows to choose the Langevin temperature and friction coefficient
+   per particle.
+
+-  ``ROTATIONAL_INERTIA``
+
+-  ``EXTERNAL_FORCES`` Allows to define an arbitrary constant force for each particle
+   individually. Also allows to fix individual coordinates of particles,
+   keep them at a fixed position or within a plane.
+
+-  ``MASS`` Allows particles to have individual masses. Note that some analysis
+   procedures have not yet been adapted to take the masses into account
+   correctly.
+
+   .. seealso:: :attr:`espressomd.particle_data.ParticleHandle.mass`
+
+-  ``EXCLUSIONS`` Allows to exclude specific short ranged interactions within
+   molecules.
+
+   .. seealso:: :meth:`espressomd.particle_data.ParticleHandle.add_exclusion`
+
+-  ``COMFIXED`` Allows to fix the center of mass of all particles of a certain type.
+
+-  ``BOND_CONSTRAINT`` Turns on the RATTLE integrator which allows for fixed lengths bonds
+   between particles.
+
+-  ``VIRTUAL_SITES_RELATIVE`` Virtual sites are particles, the position and velocity of which is
+   not obtained by integrating equations of motion. Rather, they are
+   placed using the position (and orientation) of other particles. The
+   feature allows for rigid arrangements of particles.
+
+   .. seealso:: :ref:`Virtual sites`
+
+-  ``COLLISION_DETECTION`` Allows particles to be bound on collision.
+
+In addition, there are switches that enable additional features in the
+integrator or thermostat:
+
+-  ``NPT`` Enables an on-the-fly NPT integration scheme.
+
+   .. seealso:: :ref:`Isotropic NPT thermostat`
+
+
+-  ``REACTION_ENSEMBLE``
+
+-  ``ENGINE``
+
+-  ``PARTICLE_ANISOTROPY``
+
+
+.. _Fluid dynamics and fluid structure interaction:
+
+Fluid dynamics and fluid structure interaction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+-  ``DPD`` Enables the dissipative particle dynamics thermostat and interaction.
+
+   .. seealso:: :ref:`DPD interaction`
+
+-  ``LB_BOUNDARIES``
+
+-  ``LB_BOUNDARIES_GPU``
+
+-  ``LB_ELECTROHYDRODYNAMICS`` Enables the implicit calculation of electro-hydrodynamics for charged
+   particles and salt ions in an electric field.
+
+-  ``ELECTROKINETICS``
+
+-  ``EK_BOUNDARIES``
+
+-  ``EK_DEBUG``
+
+-  ``EK_DOUBLE_PREC``
+
+
+.. _Interaction features:
+
+Interaction features
+^^^^^^^^^^^^^^^^^^^^
+
+The following switches turn on various short ranged interactions (see
+section :ref:`Isotropic non-bonded interactions`):
+
+-  ``TABULATED`` Enable support for user-defined non-bonded interaction potentials.
+
+-  ``LENNARD_JONES`` Enable the Lennard-Jones potential.
+
+-  ``LENNARD_JONES_GENERIC`` Enable the generic Lennard-Jones potential with configurable
+   exponents and individual prefactors for the two terms.
+
+-  ``LJCOS`` Enable the Lennard-Jones potential with a cosine-tail.
+
+-  ``LJCOS2`` Same as ``LJCOS``, but using a slightly different way of smoothing the
+   connection to 0.
+
+-  ``GAY_BERNE`` (experimental)
+
+-  ``HERTZIAN``
+
+-  ``NO_INTRA_NB``
+
+-  ``MORSE`` Enable the Morse potential.
+
+-  ``BUCKINGHAM`` Enable the Buckingham potential.
+
+-  ``SOFT_SPHERE`` Enable the soft sphere potential.
+
+-  ``SMOOTH_STEP`` Enable the smooth step potential, a step potential with two length
+   scales.
+
+-  ``BMHTF_NACL`` Enable the Born-Meyer-Huggins-Tosi-Fumi potential, which can be used
+   to model salt melts.
+
+-  ``GAUSSIAN``
+
+-  ``HAT``
+
+-  ``UMBRELLA`` (experimental)
+
+Some of the short-range interactions have additional features:
+
+-  ``LJGEN_SOFTCORE`` This modifies the generic Lennard-Jones potential
+   (``LENNARD_JONES_GENERIC``) with tunable parameters.
+
+
+.. _Debug messages:
+
+Debug messages
+^^^^^^^^^^^^^^
+
+Finally, there is a flag for debugging:
+
+-  ``ADDITIONAL_CHECKS`` Enables numerous additional checks which can detect
+   inconsistencies especially in the cell systems. These checks are however
+   too slow to be enabled in production runs.
+
+   .. note::
+      Because of a bug in OpenMPI versions 2.0-2.1, 3.0.0-3.0.2 and 3.1.0-3.1.2
+      that causes a segmentation fault when running the |es| OpenGL visualizer
+      with feature ``ADDITIONAL_CHECKS`` enabled together with either
+      ``ELECTROSTATICS`` or ``DIPOLES``, the subset of additional checks for
+      those two features are disabled if an unpatched version of OpenMPI is
+      detected during compilation.
+
+
+Features marked as experimental
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some of the above features are marked as EXPERIMENTAL. Activating these features can have unexpected side effects and some of them have known issues. If you activate any of these features, you should understand the corresponding source code and do extensive testing. Furthermore, it is necessary to define ``EXPERIMENTAL_FEATURES`` in :file:`myconfig.hpp`.
+
+
+External features
+^^^^^^^^^^^^^^^^^
+
+External features cannot be added to the :file:`myconfig.hpp` file by the user.
+They are added by CMake if the corresponding dependency was found on the
+system. Some of these external features are optional and must be activated
+using a CMake flag (see :ref:`Options and Variables`).
+
+- ``CUDA`` Enables GPU-specific features.
+
+- ``FFTW`` Enables features relying on the fast Fourier transforms, e.g. P3M.
+
+- ``H5MD`` Write data to H5MD-formatted hdf5 files (see :ref:`Writing H5MD-files`)
+
+- ``SCAFACOS`` Enables features relying on the ScaFaCoS library (see
+  :ref:`ScaFaCoS electrostatics`, :ref:`ScaFaCoS magnetostatics`).
+
+- ``GSL`` Enables features relying on the GNU Scientific Library, e.g.
+  :meth:`espressomd.cluster_analysis.Cluster.fractal_dimension`.
+
 
 
 .. _Configuring:
@@ -360,225 +587,11 @@ and then in the Python interpreter:
     import espressomd
     print(espressomd.features())
 
-.. _Features:
-
-Features
---------
-
-This chapter describes the features that can be activated in |es|. Even if
-possible, it is not recommended to activate all features, because this
-will negatively effect |es|'s performance.
-
-Features can be activated in the configuration header :file:`myconfig.hpp` (see
-section :ref:`myconfig.hpp\: Activating and deactivating features`). To
-activate ``FEATURE``, add the following line to the header file:
-
-.. code-block:: c++
-
-    #define FEATURE
-
-.. _General features:
-
-General features
-^^^^^^^^^^^^^^^^
-
--  ``ELECTROSTATICS`` This enables the use of the various electrostatics algorithms, such as P3M.
-
-   .. seealso:: :ref:`Electrostatics`
-
--  ``MMM1D_GPU``
-
--  ``_P3M_GPU_FLOAT``
-
-
--  ``DIPOLES`` This activates the dipole-moment property of particles; In addition,
-   the various magnetostatics algorithms, such as P3M are switched on.
-
-   .. seealso::
-
-       :ref:`Magnetostatics / Dipolar interactions`
-       :ref:`Electrostatics`
-
--  ``SCAFACOS_DIPOLES``
-
--  ``ROTATION`` Switch on rotational degrees of freedom for the particles, as well as
-   the corresponding quaternion integrator.
-
-   .. seealso:: :ref:`Setting up particles`
-
-   .. note::
-      Note, that when the feature is activated, every particle has three
-      additional degrees of freedom, which for example means that the
-      kinetic energy changes at constant temperature is twice as large.
-
--  ``LANGEVIN_PER_PARTICLE`` Allows to choose the Langevin temperature and friction coefficient
-   per particle.
-
--  ``ROTATIONAL_INERTIA``
-
--  ``EXTERNAL_FORCES`` Allows to define an arbitrary constant force for each particle
-   individually. Also allows to fix individual coordinates of particles,
-   keep them at a fixed position or within a plane.
-
--  ``MASS`` Allows particles to have individual masses. Note that some analysis
-   procedures have not yet been adapted to take the masses into account
-   correctly.
-
-   .. seealso:: :attr:`espressomd.particle_data.ParticleHandle.mass`
-
--  ``EXCLUSIONS`` Allows to exclude specific short ranged interactions within
-   molecules.
-
-   .. seealso:: :meth:`espressomd.particle_data.ParticleHandle.add_exclusion`
-
--  ``COMFIXED`` Allows to fix the center of mass of all particles of a certain type.
-
--  ``BOND_CONSTRAINT`` Turns on the RATTLE integrator which allows for fixed lengths bonds
-   between particles.
-
--  ``VIRTUAL_SITES_RELATIVE`` Virtual sites are particles, the position and velocity of which is
-   not obtained by integrating equations of motion. Rather, they are
-   placed using the position (and orientation) of other particles. The
-   feature allows for rigid arrangements of particles.
-
-   .. seealso:: :ref:`Virtual sites`
-
--  ``METADYNAMICS``
-
-
--  ``COLLISION_DETECTION`` Allows particles to be bound on collision.
-
--  ``H5MD`` Allows to write data to H5MD formatted hdf5 files.
-
-   .. seealso:: :ref:`Writing H5MD-files`
-
-In addition, there are switches that enable additional features in the
-integrator or thermostat:
-
--  ``NPT`` Enables an on-the-fly NPT integration scheme.
-
-   .. seealso:: :ref:`Isotropic NPT thermostat`
-
-
--  ``MEMBRANE_COLLISION``
-
--  ``REACTION_ENSEMBLE``
-
--  ``ENGINE``
-
--  ``PARTICLE_ANISOTROPY``
-
-.. _Fluid dynamics and fluid structure interaction:
-
-
-Fluid dynamics and fluid structure interaction
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
--  ``DPD`` Enables the dissipative particle dynamics thermostat and interaction.
-
-   .. seealso:: :ref:`DPD interaction`
-
--  ``LB_BOUNDARIES``
-
--  ``LB_BOUNDARIES_GPU``
-
--  ``LB_ELECTROHYDRODYNAMICS`` Enables the implicit calculation of electro-hydrodynamics for charged
-   particles and salt ions in an electric field.
-
--  ``ELECTROKINETICS``
-
--  ``EK_BOUNDARIES``
-
--  ``EK_DEBUG``
-
--  ``EK_DOUBLE_PREC``
-
--  ``OIF_LOCAL_FORCES``
-
--  ``OIF_GLOBAL_FORCES``
-
-
-.. _Interaction features:
-
-Interaction features
-^^^^^^^^^^^^^^^^^^^^
-
-The following switches turn on various short ranged interactions (see
-section :ref:`Isotropic non-bonded interactions`):
-
--  ``TABULATED`` Enable support for user-defined non-bonded interaction potentials.
-
--  ``LENNARD_JONES`` Enable the Lennard-Jones potential.
-
--  ``LENNARD_JONES_GENERIC`` Enable the generic Lennard-Jones potential with configurable
-   exponents and individual prefactors for the two terms.
-
--  ``LJCOS`` Enable the Lennard-Jones potential with a cosine-tail.
-
--  ``LJCOS2`` Same as ``LJCOS``, but using a slightly different way of smoothing the
-   connection to 0.
-
--  ``GAY_BERNE`` (experimental)
-
--  ``HERTZIAN``
-
--  ``NO_INTRA_NB``
-
--  ``MORSE`` Enable the Morse potential.
-
--  ``BUCKINGHAM`` Enable the Buckingham potential.
-
--  ``SOFT_SPHERE`` Enable the soft sphere potential.
-
--  ``SMOOTH_STEP`` Enable the smooth step potential, a step potential with two length
-   scales.
-
--  ``BMHTF_NACL`` Enable the Born-Meyer-Huggins-Tosi-Fumi potential, which can be used
-   to model salt melts.
-
--  ``GAUSSIAN``
-
--  ``HAT``
-
--  ``UMBRELLA`` (experimental)
-
-Some of the short-range interactions have additional features:
-
--  ``LJGEN_SOFTCORE`` This modifies the generic Lennard-Jones potential
-   (``LENNARD_JONES_GENERIC``) with tunable parameters.
-
-
-.. _Debug messages:
-
-Debug messages
-^^^^^^^^^^^^^^
-
-Finally, there is a flag for debugging:
-
--  ``ADDITIONAL_CHECKS`` Enables numerous additional checks which can detect
-   inconsistencies especially in the cell systems. These checks are however
-   too slow to be enabled in production runs.
-
-   .. note::
-      Because of a bug in OpenMPI versions 2.0-2.1, 3.0.0-3.0.2 and 3.1.0-3.1.2
-      that causes a segmentation fault when running the |es| OpenGL visualizer
-      with feature ``ADDITIONAL_CHECKS`` enabled together with either
-      ``ELECTROSTATICS`` or ``DIPOLES``, the subset of additional checks for
-      those two features are disabled if an unpatched version of OpenMPI is
-      detected during compilation.
-
-
-
-Features marked as experimental
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Some of the above features are marked as EXPERIMENTAL. Activating these features can have unexpected side effects and some of them have known issues. If you activate any of these features, you should understand the corresponding source code and do extensive testing. Furthermore, it is necessary to define ``EXPERIMENTAL_FEATURES`` in :file:`myconfig.hpp`.
-
-
 
 .. _cmake:
 
-cmake
-^^^^^
+``cmake``
+^^^^^^^^^
 
 In order to build the first step is to create a build directory in which
 cmake can be executed. In cmake, the *source directory* (that contains
@@ -590,6 +603,10 @@ different libraries and tools required by the compilation process. By
 having multiple build directories you can build several variants of |es|,
 each variant having different activated features, and for as many
 platforms as you want.
+
+Once you've run ``ccmake``, you can list the configured variables with
+``cmake -LAH -N | less`` (uses a pager) or with ``ccmake ..`` and pressing
+key ``t`` to toggle the advanced mode on (uses the curses interface).
 
 **Example:**
 
@@ -607,10 +624,11 @@ are ever modified by the build process.
 
 Afterwards |es| can be run via calling :file:`./pypresso` from the command line.
 
+
 .. _ccmake:
 
-ccmake
-^^^^^^
+``ccmake``
+^^^^^^^^^^
 
 Optionally and for easier use, the curses interface to cmake can be used
 to configure |es| interactively.
@@ -653,13 +671,13 @@ options are available:
 
 * ``WITH_TESTS``: Enable tests
 
-* ``WITH_SCAFACOS``: Build with Scafacos support
+* ``WITH_SCAFACOS``: Build with ScaFaCoS support
 
 * ``WITH_VALGRIND_INSTRUMENTATION``: Build with valgrind instrumentation
   markers
 
-When the value in the :file:`CMakeLists.txt` file is set to ON the corresponding
-option is created if the value of the option is set to OFF the
+When the value in the :file:`CMakeLists.txt` file is set to ON, the corresponding
+option is created; if the value of the option is set to OFF, the
 corresponding option is not created. These options can also be modified
 by calling ``cmake`` with the command line argument ``-D``:
 
@@ -667,16 +685,23 @@ by calling ``cmake`` with the command line argument ``-D``:
 
     cmake -D WITH_HDF5=OFF srcdir
 
-In the rare event when working with cmake and you want to have a totally
-clean build (for example because you switched the compiler), remove the
-build directory and create a new one.
+When an option is activated, additional options may become available.
+For example with ``-D WITH_CUDA=ON``, one can choose the CUDA compiler with
+``-D WITH_CUDA_COMPILER=<compiler_id>``, where ``<compiler_id>`` can be
+``nvcc`` (default), ``clang`` or ``hip``. For ``hip``, an additional
+``-D ROCM_HOME=<path_to_rocm>`` variable becomes available, with default value
+``ROCM_HOME=/opt/rocm``.
+
+Environment variables can be passed to CMake. For example, to select Clang, use
+``CC=clang CXX=clang++ cmake .. -DWITH_CUDA=ON -DWITH_CUDA_COMPILER=clang``.
+If you have multiple versions of the CUDA library installed, you can select the
+correct one with ``CUDA_BIN_PATH=/usr/local/cuda-10.0 cmake .. -DWITH_CUDA=ON``
+(with Clang as the CUDA compiler, you also need to override its default CUDA
+path with ``-DCMAKE_CXX_FLAGS=--cuda-path=/usr/local/cuda-10.0``).
 
 
-
-.. _make\: Compiling, testing and installing:
-
-``make``: Compiling, testing and installing
--------------------------------------------
+Compiling, testing and installing
+---------------------------------
 
 The command ``make`` is mainly used to compile the source code, but it
 can do a number of other things. The generic syntax of the ``make``
@@ -735,6 +760,9 @@ compilation process significantly.
 Running |es|
 ------------
 
+Executing a simulation script
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 |es| is implemented as a Python module. This means that you need to write a
 python script for any task you want to perform with |es|. In this chapter,
 the basic structure of the interface will be explained. For a practical
@@ -754,6 +782,9 @@ The ``pypresso`` script is just a wrapper in order to expose the |es| python
 module to the system's python interpreter by modifying the ``$PYTHONPATH``.
 Please see the following chapter :ref:`Setting up the system` describing how
 to actually write a simulation script for |es|.
+
+Running an interactive notebook
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Running the Jupyter interpreter requires using the ``ipypresso`` script, which
 is also located in the build directory (its name comes from the IPython
@@ -853,6 +884,3 @@ use one tool at a time.
 
 .. [5]
    http://www.fftw.org/
-
-.. [6]
-   https://developer.nvidia.com/cuda-downloads

@@ -23,7 +23,7 @@
 
 #include "electrostatics_magnetostatics/mdlc_correction.hpp"
 
-#if defined(DIPOLES) && defined(DP3M)
+#ifdef DP3M
 #include "Particle.hpp"
 #include "cells.hpp"
 #include "communication.hpp"
@@ -36,11 +36,10 @@
 
 DLC_struct dlc_params = {1e100, 0, 0, 0, 0};
 
-static int n_local_particles = 0;
 static double mu_max;
 
 void calc_mu_max() {
-  auto local_particles = cell_structure.local_cells().particles();
+  auto local_particles = cell_structure.local_particles();
   mu_max = std::accumulate(
       local_particles.begin(), local_particles.end(), 0.0,
       [](double mu, Particle const &p) { return std::max(mu, p.p.dipm); });
@@ -90,11 +89,12 @@ double slab_dip_count_mu(double *mt, double *mx, double *my,
 }
 
 /** Compute the dipolar DLC corrections for forces and torques.
- *  Algorithm implemented accordingly to @cite brodka04a.
+ *  %Algorithm implemented accordingly to @cite brodka04a.
  */
 double get_DLC_dipolar(int kcut, std::vector<Utils::Vector3d> &fs,
                        std::vector<Utils::Vector3d> &ts,
                        const ParticleRange &particles) {
+  auto const n_local_particles = particles.size();
 
   std::vector<double> ReSjp(n_local_particles), ReSjm(n_local_particles);
   std::vector<double> ImSjp(n_local_particles), ImSjm(n_local_particles);
@@ -236,12 +236,9 @@ double get_DLC_dipolar(int kcut, std::vector<Utils::Vector3d> &fs,
 }
 
 /** Compute the dipolar DLC corrections
- *  Algorithm implemented accordingly to @cite brodka04a.
+ *  %Algorithm implemented accordingly to @cite brodka04a.
  */
 double get_DLC_energy_dipolar(int kcut, const ParticleRange &particles) {
-
-  n_local_particles = particles.size();
-
   auto const facux = 2.0 * M_PI / box_geo.length()[0];
   auto const facuy = 2.0 * M_PI / box_geo.length()[1];
 
@@ -306,21 +303,18 @@ double get_DLC_energy_dipolar(int kcut, const ParticleRange &particles) {
  *  methods when we have a slab geometry
  */
 void add_mdlc_force_corrections(const ParticleRange &particles) {
-
-  n_local_particles = particles.size();
-
   auto const volume = box_geo.volume();
 
   // --- Create arrays that should contain the corrections to
   //     the forces and torques, and set them to zero.
-
-  std::vector<Utils::Vector3d> dip_DLC_f(n_part);
-  std::vector<Utils::Vector3d> dip_DLC_t(n_part);
+  std::vector<Utils::Vector3d> dip_DLC_f(particles.size());
+  std::vector<Utils::Vector3d> dip_DLC_t(particles.size());
 
   //---- Compute the corrections ----------------------------------
 
   // First the DLC correction
-  get_DLC_dipolar(dlc_params.far_cut, dip_DLC_f, dip_DLC_t, particles);
+  get_DLC_dipolar(static_cast<int>(std::round(dlc_params.far_cut)), dip_DLC_f,
+                  dip_DLC_t, particles);
 
   // Now we compute the correction like Yeh and Klapp to take into account
   // the fact that you are using a 3D PBC method which uses spherical
@@ -372,7 +366,9 @@ double add_mdlc_energy_corrections(const ParticleRange &particles) {
 
   // First the DLC correction
   double dip_DLC_energy =
-      dipole.prefactor * get_DLC_energy_dipolar(dlc_params.far_cut, particles);
+      dipole.prefactor *
+      get_DLC_energy_dipolar(static_cast<int>(std::round(dlc_params.far_cut)),
+                             particles);
 
   // Now we compute the correction like Yeh and Klapp to take into account
   // the fact that you are using a 3D PBC method which uses spherical
@@ -421,16 +417,15 @@ double add_mdlc_energy_corrections(const ParticleRange &particles) {
  *     it makes no sense to have an accurate result for DLC-dipolar.
  */
 int mdlc_tune(double error) {
-
-  auto const n = (double)n_part;
-  auto const lx = box_geo.length()[0];
-  auto const ly = box_geo.length()[1];
-  auto const lz = box_geo.length()[2];
-  auto const a = lx * ly;
   mpi_bcast_max_mu(); /* we take the maximum dipole in the system, to be sure
                          that the errors in the other case
                          will be equal or less than for this one */
 
+  const double n = get_n_part();
+  auto const lx = box_geo.length()[0];
+  auto const ly = box_geo.length()[1];
+  auto const lz = box_geo.length()[2];
+  auto const a = lx * ly;
   auto const h = dlc_params.h;
   if (h < 0)
     return ES_ERROR;
@@ -518,4 +513,4 @@ int mdlc_set_params(double maxPWerror, double gap_size, double far_cut) {
   return ES_OK;
 }
 
-#endif
+#endif // DP3M

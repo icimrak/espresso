@@ -112,8 +112,7 @@ int iccp3m_iteration(const ParticleRange &particles,
 
     force_calc_iccp3m(particles, ghost_particles); /* Calculate electrostatic
                             forces (SR+LR) excluding source source interaction*/
-    ghost_communicator(&cell_structure.collect_ghost_force_comm,
-                       GHOSTTRANS_FORCE);
+    cell_structure.ghosts_reduce_forces();
 
     double diff = 0;
 
@@ -174,8 +173,7 @@ int iccp3m_iteration(const ParticleRange &particles,
       }
     } /* cell particles */
     /* Update charges on ghosts. */
-    ghost_communicator(&cell_structure.exchange_ghosts_comm,
-                       GHOSTTRANS_PROPRTS);
+    cell_structure.ghosts_update(Cells::DATA_PART_PROPERTIES);
 
     iccp3m_cfg.citeration++;
 
@@ -199,7 +197,8 @@ void force_calc_iccp3m(const ParticleRange &particles,
                        const ParticleRange &ghost_particles) {
   init_forces_iccp3m(particles, ghost_particles);
 
-  short_range_loop(Utils::NoOp{}, [](Particle &p1, Particle &p2, Distance &d) {
+  short_range_loop(Utils::NoOp{}, [](Particle &p1, Particle &p2,
+                                     Distance const &d) {
     /* calc non bonded interactions */
     add_non_bonded_pair_force_iccp3m(p1, p2, d.vec21, sqrt(d.dist2), d.dist2);
   });

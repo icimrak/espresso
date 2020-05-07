@@ -27,8 +27,7 @@ from threading import Thread
 assert_features(["ELECTROSTATICS", "MASS", "LENNARD_JONES"])
 
 system = espressomd.System(box_l=[1.0, 1.0, 1.0])
-system.seed = system.cell_system.get_state()['n_nodes'] * [1234]
-numpy.random.seed(system.seed)
+numpy.random.seed(seed=42)
 
 visualizer = visualization_opengl.openGLLive(
     system,
@@ -60,9 +59,9 @@ def decreaseTemp():
 
 
 # Register buttons
-visualizer.keyboardManager.register_button(visualization_opengl.KeyboardButtonEvent(
+visualizer.keyboard_manager.register_button(visualization_opengl.KeyboardButtonEvent(
     't', visualization_opengl.KeyboardFireEvent.Hold, increaseTemp))
-visualizer.keyboardManager.register_button(visualization_opengl.KeyboardButtonEvent(
+visualizer.keyboard_manager.register_button(visualization_opengl.KeyboardButtonEvent(
     'g', visualization_opengl.KeyboardFireEvent.Hold, decreaseTemp))
 
 
@@ -76,8 +75,11 @@ density = 1.5736
 time_step = 0.001823
 temp = 298.0
 gamma = 20.0
-#l_bjerrum = 0.885^2 * e^2/(4*pi*epsilon_0*k_B*T)
-l_bjerrum = 130878.0 / temp
+k_B = 1.380649e-23  # units of [J/K]
+q_e = 1.602176634e-19  # units of [C]
+epsilon_0 = 8.8541878128e-12  # units of [C^2/J/m]
+coulomb_prefactor = q_e**2 / (4 * numpy.pi * epsilon_0) * 1e10
+l_bjerrum = 0.885**2 * coulomb_prefactor / (k_B * temp)
 
 num_steps_equilibration = 30
 

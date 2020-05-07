@@ -68,7 +68,7 @@ void init_forces(const ParticleRange &particles) {
   /* initialize ghost forces with zero
      set torque to zero for all and rescale quaternions
   */
-  for (auto &p : cell_structure.ghost_cells().particles()) {
+  for (auto &p : cell_structure.ghost_particles()) {
     p.f = init_ghost_force(p);
   }
 }
@@ -88,10 +88,10 @@ void force_calc(CellStructure &cell_structure) {
   prepare_local_collision_queue();
 #endif
 
-  auto particles = cell_structure.local_cells().particles();
-  auto ghost_particles = cell_structure.ghost_cells().particles();
+  auto particles = cell_structure.local_particles();
+  auto ghost_particles = cell_structure.ghost_particles();
 #ifdef ELECTROSTATICS
-  iccp3m_iteration(particles, cell_structure.ghost_cells().particles());
+  iccp3m_iteration(particles, cell_structure.ghost_particles());
 #endif
   init_forces(particles);
 
@@ -117,11 +117,11 @@ void force_calc(CellStructure &cell_structure) {
 #endif
 
   for (auto &p : particles) {
-    add_single_particle_force(p);
+    add_single_particle_force(p); // This is outside the short_range_loop because of the membrane collision and out_direction
   }
   short_range_loop(
       [](Particle &p) {},
-      [](Particle &p1, Particle &p2, Distance &d) {
+      [](Particle &p1, Particle &p2, Distance const &d) {
         add_non_bonded_pair_force(p1, p2, d.vec21, sqrt(d.dist2), d.dist2);
 #ifdef COLLISION_DETECTION
         if (collision_params.mode != COLLISION_MODE_OFF)
@@ -133,32 +133,26 @@ void force_calc(CellStructure &cell_structure) {
 
   Constraints::constraints.add_forces(particles, sim_time);
 
-#ifdef OIF_GLOBAL_FORCES
   if (max_oif_objects) {
-    double area_volume[2]; // There are two global quantities that need to be
-    // evaluated: object's surface and object's volume. One
-    // can add another quantity.
+    // There are two global quantities that need to be evaluated:
+    // object's surface and object's volume. One can add another
+    // quantity.
+    Utils::Vector2d area_volume;
     area_volume[0] = 0.0;
     area_volume[1] = 0.0;
     for (int i = 0; i < max_oif_objects; i++) {
-      calc_oif_global(area_volume, i, particles);
+      calc_oif_global(area_volume, i, cell_structure);
       if (fabs(area_volume[0]) < 1e-100 && fabs(area_volume[1]) < 1e-100)
         break;
-      add_oif_global_forces(area_volume, i, particles);
+      add_oif_global_forces(area_volume, i, cell_structure);
     }
   }
-#endif
 
   // Must be done here. Forces need to be ghost-communicated
-  immersed_boundaries.volume_conservation();
+  immersed_boundaries.volume_conservation(cell_structure);
 
   lb_lbcoupling_calc_particle_lattice_ia(thermo_virtual, particles,
                                          ghost_particles);
-
-#ifdef METADYNAMICS
-  /* Metadynamics main function */
-  meta_perform(particles);
-#endif
 
 #ifdef CUDA
   copy_forces_from_GPU(particles);
@@ -170,8 +164,7 @@ void force_calc(CellStructure &cell_structure) {
 #endif
 
   // Communication Step: ghost forces
-  ghost_communicator(&cell_structure.collect_ghost_force_comm,
-                     GHOSTTRANS_FORCE);
+  cell_structure.ghosts_reduce_forces();
 
   // should be pretty late, since it needs to zero out the total force
   comfixed.apply(comm_cart, particles);

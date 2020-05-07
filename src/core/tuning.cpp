@@ -19,40 +19,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 /** \file
-    Implementation of tuning.hpp .
-*/
+ *  Implementation of tuning.hpp.
+ */
+#include "cells.hpp"
 #include "communication.hpp"
-#include "domain_decomposition.hpp"
 #include "errorhandling.hpp"
 #include "global.hpp"
 #include "grid.hpp"
 #include "integrate.hpp"
-#include <limits>
-#include <sys/resource.h>
-#include <sys/time.h>
 #include <utils/statistics/RunningAverage.hpp>
 
+#include <boost/range/algorithm/max_element.hpp>
 #include <boost/range/algorithm/min_element.hpp>
+#include <nonbonded_interactions/nonbonded_interaction_data.hpp>
+
 int timing_samples = 10;
 
-/**
- * \brief Time the force calculation.
- * This times the force calculation without
- * propagating the system. It therefore does
- * not include e.g. Verlet list updates.
- *
- * @return Time per integration in ms.
- */
 double time_force_calc(int default_samples) {
-  int rds = timing_samples > 0 ? timing_samples : default_samples;
-  int i;
+  auto const rds = timing_samples > 0 ? timing_samples : default_samples;
   Utils::Statistics::RunningAverage<double> running_average;
 
   if (mpi_integrate(0, 0))
     return -1;
 
   /* perform force calculation test */
-  for (i = 0; i < rds; i++) {
+  for (int i = 0; i < rds; i++) {
     const double tick = MPI_Wtime();
 
     if (mpi_integrate(0, -1))
@@ -104,10 +95,13 @@ void tune_skin(double min_skin, double max_skin, double tol, int int_steps,
   double a = min_skin;
   double b = max_skin;
   double time_a, time_b;
-  double min_cell_size =
-      std::min(std::min(dd.cell_size[0], dd.cell_size[1]), dd.cell_size[2]);
+
+  /* The maximal skin is the remainder from the required cutoff to
+   * the maximal range that can be supported by the cell system, but
+   * never larger than half the box size. */
   double const max_permissible_skin =
-      std::nextafter(min_cell_size - max_cut, 0.);
+      std::min(*boost::min_element(cell_structure.max_range) - maximal_cutoff(),
+               0.5 * *boost::max_element(box_geo.length()));
 
   if (adjust_max_skin and max_skin > max_permissible_skin)
     b = max_permissible_skin;

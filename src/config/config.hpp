@@ -30,8 +30,12 @@
  */
 
 /* Prevent C++ bindings in MPI (there is a DataType called LB in there) */
+#ifndef OMPI_SKIP_MPICXX
 #define OMPI_SKIP_MPICXX
+#endif
+#ifndef MPICH_SKIP_MPICXX
 #define MPICH_SKIP_MPICXX
+#endif
 
 #include "config-features.hpp"
 
@@ -101,10 +105,6 @@
 /** Tiny oif elasticity cutoff. */
 #ifndef TINY_OIF_ELASTICITY_COEFFICIENT
 #define TINY_OIF_ELASTICITY_COEFFICIENT 1e-10
-#endif
-/** Small oif membrane collision cutoff. */
-#ifndef SMALL_OIF_MEMBRANE_CUTOFF
-#define SMALL_OIF_MEMBRANE_CUTOFF 0.05
 #endif
 
 /** Maximal number of iterations in the RATTLE algorithm before it bails out. */
