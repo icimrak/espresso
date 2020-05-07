@@ -471,9 +471,15 @@ calc_bonded_four_body_force(Bonded_ia_parameters const &iaparams,
                             Particle const &p3, Particle const &p4) {
   switch (iaparams.type) {      
   case BONDED_IA_OIF_OUT_DIRECTION:
-    auto const &boogie = calc_out_direction(p2, p3, p4);
-    p1.p.out_direction = boogie;
-    return std::make_tuple([0.0,0.0,0.0], [0.0,0.0,0.0], [0.0,0.0,0.0], [0.0,0.0,0.0]); // because it needs to return a zero force that will be added....     
+    {
+        auto boogie = calc_out_direction(p2, p3, p4);
+    p1.p.out_direction = {0.0,0.0,0.0};
+    Utils::Vector3d force1 = {0.0,0.0,0.0,0.0};
+    Utils::Vector3d force2 = {0.0,0.0,0.0,0.0};
+    Utils::Vector3d force3 = {0.0,0.0,0.0,0.0};
+    Utils::Vector3d force4 = {0.0,0.0,0.0,0.0};
+    return std::make_tuple(force2, force1, force3, force4); // because it needs to return a zero force that will be added....     
+}
   case BONDED_IA_OIF_LOCAL_FORCES:
     return calc_oif_local(p1, p2, p3, p4, iaparams);
   case BONDED_IA_IBM_TRIBEND:
