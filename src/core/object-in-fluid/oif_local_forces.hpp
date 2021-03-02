@@ -265,8 +265,37 @@ calc_oif_local(Particle const &p2, Particle const &p1, Particle const &p3,
       auto const m2_length2 = m2.norm2();
       auto const m3_length2 = m3.norm2();
 
-      auto const fac =
+      auto fac =
           kal * A0 * (2 * t + t * t) / (m1_length2 + m2_length2 + m3_length2);
+      double val = 0.0;
+      if ((A > 2.0*A0) && (A < 2.5*A0)) {
+        val = 1.0/4.0*A0*A0/((2.5*A0 - A)*(2.5*A0 - A));
+        if (val > 150.0) {
+            val = 150.0;
+        }
+        fac = fac*val;
+      }        
+      if (A > 2.5*A0) {
+        val = 150.0;
+        fac = fac*val;
+      }        
+      if ((A > 0.25*A0) && (A < 0.5*A0)) {
+        val = 1.0/16.0*A0*A0/((A - 0.25*A0)*(A - 0.25*A0));
+        if (val > 150.0) {
+            val = 150.0;
+        }
+        fac = fac*val;
+      }
+      if (A < 0.25*A0) {
+        val = 150.0;
+        fac = fac*val;
+      }
+
+
+
+
+
+
 
       // local area force for p1
       force1 += (fac / 3.0) * m1;
